@@ -493,6 +493,8 @@ CONTAINS
     CHARACTER(LEN=50)             :: T_REACT
     CHARACTER(LEN=120)            :: CLINE
     REAL(fp)                      :: F_FJX
+    REAL(fp)                      :: MW
+    CHARACTER(LEN=8)              :: sMW
     INTEGER                       :: JJ, NUNIT
     CHARACTER(LEN=255)            :: MYFRIENDLIES
     CHARACTER(LEN=31)             :: iName
@@ -676,18 +678,25 @@ CONTAINS
           ! Get long name
           iName = TRIM(SUBSTRS(1))
           CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), iName=iName, &
-                          KppSpcID=-1, oFullName = FullName, oFormula = Formula, &
-                          Found=Found, Underscores = .TRUE., RC = RC )
-          IF ( Found ) THEN
-             IF ( TRIM(Formula) /= '' ) FullName = TRIM(Fullname)//'_('//TRIM(Formula)//')'
-          ELSE
-             FullName = TRIM(SUBSTRS(1))
-          ENDIF          
+                          KppSpcID=-1, oDiagName = FullName, Found=Found, &
+                          Underscores = .FALSE., RC = RC )
+          IF ( .NOT. FOUND ) FullName = TRIM(SUBSTRS(1))
 
+          ! Set some long names manually ...
+          SELECT CASE ( TRIM(SUBSTRS(1)) )
+             CASE ('OH')
+                FullName = 'Hydroxyl radical (OH, MW = 17.01 g mol-1)'
+             CASE ('HO2')
+                FullName = 'Hydroperoxyl radical (HO2, MW = 33.01 g mol-1)'
+             CASE ('O')
+                FullName = 'Molecular oxygen (O, MW = 16.01 g mol-1)'
+          END SELECT
+      
+          ! Add to internal spec
           call MAPL_AddInternalSpec(GC, &
                SHORT_NAME         = 'TRC_'//TRIM(SUBSTRS(1)), &
                !LONG_NAME          = TRIM(SUBSTRS(1)),         &
-               LONG_NAME          = TRIM(FullName),           &
+               LONG_NAME          = TRIM(FullName)//' mass mixing ratio total air', &
                UNITS              = 'kg kg-1',                &
                DIMS               = MAPL_DimsHorzVert,        &
                VLOCATION          = MAPL_VLocationCenter,     &
@@ -758,18 +767,13 @@ CONTAINS
              ! Get long name
              iName = TRIM(SpcName)
              CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), iName=iName, &
-                             KppSpcID=-1, oFullName = FullName, oFormula = Formula, &
-                             Found=Found, Underscores = .TRUE., RC = RC )
-             IF ( Found ) THEN
-                IF ( TRIM(Formula) /= '' ) FullName = TRIM(Fullname)//'_('//TRIM(Formula)//')'
-             ELSE
-                FullName = TRIM(SpcName)
-             ENDIF          
-
+                             KppSpcID=-1, oDiagName = FullName, Found=Found, &
+                             Underscores = .FALSE., RC = RC )
+             IF ( .NOT. FOUND ) FullName = TRIM(SpcName)
              CALL MAPL_AddInternalSpec(GC,                 &
                 SHORT_NAME         = TRIM(SPFX)//SpcName,      &
                 !LONG_NAME          = SpcName,              &
-                LONG_NAME          = TRIM(FullName),       &
+                LONG_NAME          = TRIM(FullName)//' mass mixing ratio total air', &
                 UNITS              = 'kg kg-1',            &
 !!!             PRECISION          = ESMF_KIND_R8,          &
                 DIMS               = MAPL_DimsHorzVert,    &
@@ -829,6 +833,11 @@ CONTAINS
 ! GEOS-5 only (should handle diags elsewhere):
 !-- Exports
     DO I=1,Nadv
+       iName = TRIM(AdvSpc(I))
+       CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), iName=iName, &
+                       KppSpcID=-1, oDiagName = FullName, Found=Found, &
+                       Underscores = .FALSE., RC = RC )
+       IF ( .NOT. FOUND ) FullName = TRIM(SpcName)
 
        ! For all advected species, create placeholder export for deposition 
        ! diagnostics. These may not be defined for all species (some species 
@@ -836,17 +845,16 @@ CONTAINS
        ! are not yet fully defined. Convective wet deposition flux
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'WetLossConv_'//TRIM(AdvSpc(I)),               & 
-          LONG_NAME          = 'Vertical_integrated_loss_of_'//               &
-                               TRIM(AdvSpc(I))//'_in_convective_updrafts',    &
+          LONG_NAME          = TRIM(FullName)//' vertical integrated loss'//  &
+                               ' in convective updrafts',                     &
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
                                                                      __RC__ )
        ! 3D
        CALL MAPL_AddExportSpec(GC,                                            &
-          SHORT_NAME         = 'WetLossConv3D_'//TRIM(AdvSpc(I)),        & 
-          LONG_NAME          = 'Vertical_integrated_loss_of_'//               &
-                               TRIM(AdvSpc(I))//'_in_convective_updrafts',    &
+          SHORT_NAME         = 'WetLossConv3D_'//TRIM(AdvSpc(I)),             & 
+          LONG_NAME          = TRIM(FullName)//' loss in convective updrafts',&
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzVert,                             &
           VLOCATION          = MAPL_VLocationCenter,                          &
@@ -854,16 +862,31 @@ CONTAINS
        ! Large scale wet deposition flux
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'WetLossLS_'//TRIM(AdvSpc(I)),                 & 
-          LONG_NAME          = 'Vertical_integrated_loss_of_'//TRIM(AdvSpc(I))&
-                               //'_in_large_scale_precipitation',             &
+          LONG_NAME          = TRIM(FullName)//' vertical integrated loss'//  &
+                               ' in large scale precipitation',               &
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
                                                                      __RC__ )
        CALL MAPL_AddExportSpec(GC,                                            &
-          SHORT_NAME         = 'WetLossLS3D_'//TRIM(AdvSpc(I)),          & 
-          LONG_NAME          = 'Vertical_integrated_loss_of_'//TRIM(AdvSpc(I))&
-                               //'_in_large_scale_precipitation',             &
+          SHORT_NAME         = 'WetLossLS3D_'//TRIM(AdvSpc(I)),               & 
+          LONG_NAME          = TRIM(FullName)//' loss in large scale precipitation', &
+          UNITS              = 'kg m-2 s-1',                                  &
+          DIMS               = MAPL_DimsHorzVert,                             &
+          VLOCATION          = MAPL_VLocationCenter,                          &
+                                                                     __RC__ )
+       ! Total wet deposition flux
+       CALL MAPL_AddExportSpec(GC,                                            &
+          SHORT_NAME         = 'WetLossTot_'//TRIM(AdvSpc(I)),                & 
+          LONG_NAME          = TRIM(FullName)//' vertical integrated loss'//  &
+                               '_due_to_wet_scavenging',                      &
+          UNITS              = 'kg m-2 s-1',                                  &
+          DIMS               = MAPL_DimsHorzOnly,                             &
+          VLOCATION          = MAPL_VLocationNone,                            &
+                                                                     __RC__ )
+       CALL MAPL_AddExportSpec(GC,                                            &
+          SHORT_NAME         = 'WetLossTot3D_'//TRIM(AdvSpc(I)),              & 
+          LONG_NAME          = TRIM(FullName)//' loss due to wet scavenging', &
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzVert,                             &
           VLOCATION          = MAPL_VLocationCenter,                          &
@@ -871,7 +894,7 @@ CONTAINS
        ! Dry deposition flux
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'DryDep_'//TRIM(AdvSpc(I)),                    & 
-          LONG_NAME          = TRIM(AdvSpc(I))//'_dry_deposition_flux',       &
+          LONG_NAME          = TRIM(FullName)//' dry deposition flux',        &
           UNITS              = 'molec cm-2 s-1',                              &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -879,29 +902,17 @@ CONTAINS
        ! Dry deposition velocity
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'DryDepVel_'//TRIM(AdvSpc(I)),                 & 
-          LONG_NAME          = TRIM(AdvSpc(I))//'_dry_deposition_velocity',   &
+          LONG_NAME          = TRIM(FullName)//' dry deposition velocity',    &
           UNITS              = 'cm s-1',                                      &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
                                                                      __RC__ )
 
        ! Also create export field in v/v dry air
-
-       ! Get long name
-       iName = TRIM(AdvSpc(I))
-       CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), iName=iName, &
-                       KppSpcID=-1, oFullName = FullName, oFormula = Formula, &
-                       Found = Found, Underscores = .TRUE., RC = RC )
-       IF ( Found ) THEN
-          IF ( TRIM(Formula) /= '' ) FullName = TRIM(Fullname)//'_('//TRIM(Formula)//')'
-       ELSE
-          FullName = TRIM(AdvSpc(I))
-       ENDIF
-
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = TRIM(AdvSpc(I))//'dry',                        & 
           LONG_NAME          = TRIM(FullName)//                               &
-                               '_volume_mixing_ratio_dry_air',                &
+                               ' volume mixing ratio dry air',                &
           UNITS              = 'mol mol-1',                                   &
           DIMS               = MAPL_DimsHorzVert,                             &
           VLOCATION          = MAPL_VLocationCenter,                          &
@@ -909,7 +920,7 @@ CONTAINS
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = TRIM(AdvSpc(I))//'vv_2m',                      & 
           LONG_NAME          = TRIM(FullName)//                               &
-                               '_volume_mixing_ratio_dry_air_at_2m',          &
+                               ' volume mixing ratio dry air at 2m',          &
           UNITS              = 'mol mol-1',                                   &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -917,7 +928,7 @@ CONTAINS
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = TRIM(AdvSpc(I))//'vv_10m',                     & 
           LONG_NAME          = TRIM(FullName)//                               &
-                               '_volume_mixing_ratio_dry_air_at_10m',         &
+                               ' volume mixing ratio dry air at 10m',         &
           UNITS              = 'mol mol-1',                                   &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -929,21 +940,19 @@ CONTAINS
        SpcName = COLLIST(I)
        iName = TRIM(SpcName)
        CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), iName=iName, &
-                       KppSpcID=-1, oFullName = FullName, oFormula = Formula, &
+                       KppSpcID=-1, oDiagName = FullName, &
                        Found = Found, Underscores = .TRUE., RC = RC )
-       IF ( .NOT. Found ) THEN
-          FullName = TRIM(SpcName)
-       ENDIF          
+       IF ( .NOT. Found ) FullName = TRIM(SpcName)
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'TOTCOL_'//TRIM(SpcName),                      & 
-          LONG_NAME          = TRIM(FullName)//'_total_column_density',        &
+          LONG_NAME          = TRIM(FullName)//' total column density',        &
           UNITS              = '1.0e15 molec cm-2',                           &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
                                                                      __RC__ )
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'TROPCOL_'//TRIM(SpcName),                     & 
-          LONG_NAME          = TRIM(FullName)//'_tropospheric_column_density', &
+          LONG_NAME          = TRIM(FullName)//' tropospheric column density', &
           UNITS              = '1.0e15 molec cm-2',                           &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -2611,6 +2620,31 @@ CONTAINS
     Input_Opt%UseOnlineVUD = ( DoIt == 1 )
     IF ( am_I_Root ) THEN
        WRITE(*,*) '- Compute VUD online: ', Input_Opt%UseOnlineVUD
+    ENDIF
+
+    !=======================================================================
+    ! CH4 error checks 
+    !=======================================================================
+
+    ! CH4 surface boundary conditions have to be turned off in GEOS-5
+    IF ( Input_Opt%LCH4SBC ) THEN
+       IF ( am_I_Root ) THEN
+          WRITE(*,*) 'Please disable CH4 boundary conditions in input.geos.rc'
+          WRITE(*,*) 'CH4 boundary conditions will automatically be applied'
+          WRITE(*,*) 'if the CH4 emissions flag in input.geos.rc is turned off.'
+       ENDIF
+       ASSERT_(.FALSE.)
+    ENDIF
+
+    ! If CH4 emissions are turned on, boundary conditions will not be set
+    ! and CH4 emissions are expected to be provided via HEMCO 
+    IF ( am_I_Root ) THEN
+       IF ( Input_Opt%LCH4EMIS ) THEN
+          WRITE(*,*) 'CH4 emissions are turned on - no CH4 boundary conditions will be applied'
+          WRITE(*,*) 'and CH4 emissions are taken from HEMCO'
+       ELSE
+          WRITE(*,*) 'CH4 emissions are turned off - CH4 boundary conditions will be applied'
+       ENDIF
     ENDIF
 
     !=======================================================================
@@ -6041,17 +6075,18 @@ CONTAINS
     ! Scalars
     INTEGER                    :: STATUS
     INTEGER                    :: I, J, N, IM, JM, LM, DryID
-    LOGICAL                    :: IsNOy,  DoPM25
+    LOGICAL                    :: IsBry, IsNOy,  DoPM25
     LOGICAL                    :: RunMe, IsPM25, IsSOA, IsNi, IsSu, IsOC, IsBC, IsDu, IsSS
     CHARACTER(LEN=ESMF_MAXSTR) :: Iam           ! Gridded component name
     CHARACTER(LEN=ESMF_MAXSTR) :: FieldName, SpcName
     REAL                       :: MW
     REAL                       :: Ra_z0, Ra_2m, Ra_10m
     REAL                       :: t_, rho_, fhs_, ustar_, dz_, z0h_
+    REAL                       :: BrCoeff
 !    REAL, ALLOCATABLE          :: Ra2m(:,:), Ra10m(:,:)
 !    REAL, ALLOCATABLE          :: Lz0(:,:),  L2m(:,:), L10m(:,:)
     REAL, POINTER              :: Ptr3D(:,:,:), PtrTmp(:,:,:), Ptr2D(:,:)
-    REAL, POINTER              :: NOy(:,:,:), Ptr2m(:,:), Ptr10m(:,:)
+    REAL, POINTER              :: Bry(:,:,:), NOy(:,:,:), Ptr2m(:,:), Ptr10m(:,:)
     REAL, ALLOCATABLE          :: CONV(:,:), MyPM25(:,:,:)
     TYPE(Species), POINTER     :: SpcInfo
 
@@ -6154,6 +6189,8 @@ CONTAINS
     !=======================================================================
     CALL MAPL_GetPointer( EXPORT, NOy, 'NOy', NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(NOy) ) NOy = 0.0
+    CALL MAPL_GetPointer( EXPORT, Bry, 'Bry', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(Bry) ) Bry = 0.0
 
     ! Check for PM25 diagnostics
     CALL MAPL_GetPointer( EXPORT, PtrPM25         , 'myPM25'         , &
@@ -6242,7 +6279,24 @@ CONTAINS
           IsNOy = .FALSE.
        ENDIF
 
-       ! Is this a NOy species?
+       ! Is this a Bry species?
+       BrCoeff = 0.0
+       IF ( ASSOCIATED(Bry) ) THEN
+          SELECT CASE ( TRIM(SpcName) )
+             CASE ( 'Br', 'BrO', 'HOBr', 'HBr', 'BrNO2', 'BrNO3', 'BrCl', 'IBr' )
+                BrCoeff = 1.0
+                IsBry   = .TRUE.
+             CASE ( 'Br2' )
+                BrCoeff = 2.0
+                IsBry   = .TRUE.
+             CASE DEFAULT
+                IsBry = .FALSE.
+          END SELECT
+       ELSE
+          IsBry = .FALSE.
+       ENDIF
+
+       ! Is this a PM25 component?
        IF ( DoPM25 ) THEN
           SELECT CASE ( TRIM(SpcName) )
              CASE ( 'NH4', 'NIT' )
@@ -6279,8 +6333,8 @@ CONTAINS
                              NotFoundOk=.TRUE., __RC__ )
 
        ! Fill exports
-       IF ( ASSOCIATED(Ptr3D) .OR. IsNOy .OR. ASSOCIATED(Ptr2m) .OR. &
-            ASSOCIATED(Ptr10m) ) RunMe = .TRUE.
+       IF ( ASSOCIATED(Ptr3D)  .OR. IsNOy .OR. ASSOCIATED(Ptr2m) .OR. &
+            ASSOCIATED(Ptr10m) .OR. IsBry ) RunMe = .TRUE.
        IF ( RunMe ) THEN
 
           MW = SpcInfo%EmMW_g
@@ -6317,6 +6371,11 @@ CONTAINS
           ! NOy concentration
           !====================================================================
           IF ( IsNOy ) NOy = NOy + PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
+
+          !====================================================================
+          ! Bry concentration
+          !====================================================================
+          IF ( IsBry ) Bry = Bry + BrCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
 
           !==================================================================
           ! PM2.5 diagnostics. Calculate PM25 according to 
