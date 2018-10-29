@@ -212,15 +212,15 @@
   BOXHEIGHT                       | m              | xyz | C |    |   |   |     | grid_box_height
   CONV_CLDTOP                     | 1              | xy  |   |    |   |   |     | convective_cloud_top
   O3_MASS                         | kg m-2         | xyz | C |    |   |   |     | O3_mass 
-  OH_reactivity                   | s-1            | xyz | C |    |   |   |     | OH_reactivity_=_inverse_lifetime
-  PM25                            | ug m-3         | xyz | C |    |   |   |     | Particulate_matter_with_diameter_below_2.5_um 
-  PM25ni                          | ug m-3         | xyz | C |    |   |   |     | Nitrate_particulate_matter_with_diameter_below_2.5_um 
-  PM25su                          | ug m-3         | xyz | C |    |   |   |     | Sulfate_particulate_matter_with_diameter_below_2.5_um 
-  PM25ss                          | ug m-3         | xyz | C |    |   |   |     | Seasalt_particulate_matter_with_diameter_below_2.5_um 
-  PM25du                          | ug m-3         | xyz | C |    |   |   |     | Dust_particulate_matter_with_diameter_below_2.5_um 
-  PM25bc                          | ug m-3         | xyz | C |    |   |   |     | Black_carbon_particulate_matter_with_diameter_below_2.5_um 
-  PM25oc                          | ug m-3         | xyz | C |    |   |   |     | Organic_carbon_particulate_matter_with_diameter_below_2.5_um 
-  PM25soa                         | ug m-3         | xyz | C |    |   |   |     | SOA_particulate_matter_with_diameter_below_2.5_um
+  OH_reactivity                   | s-1            | xyz | C |    |   |   |     | total_OH_loss_rate
+  PM25                            | ug m-3         | xyz | C |    |   |   |     | Particulate_matter_with_diameter_below_2.5_um_RH_35 
+  PM25ni                          | ug m-3         | xyz | C |    |   |   |     | Nitrate_particulate_matter_with_diameter_below_2.5_um_RH_35
+  PM25su                          | ug m-3         | xyz | C |    |   |   |     | Sulfate_particulate_matter_with_diameter_below_2.5_um_RH_35
+  PM25ss                          | ug m-3         | xyz | C |    |   |   |     | Seasalt_particulate_matter_with_diameter_below_2.5_um_RH_35
+  PM25du                          | ug m-3         | xyz | C |    |   |   |     | Dust_particulate_matter_with_diameter_below_2.5_um_RH_35
+  PM25bc                          | ug m-3         | xyz | C |    |   |   |     | Black_carbon_particulate_matter_with_diameter_below_2.5_um_RH_35
+  PM25oc                          | ug m-3         | xyz | C |    |   |   |     | Organic_carbon_particulate_matter_with_diameter_below_2.5_um_RH_35
+  PM25soa                         | ug m-3         | xyz | C |    |   |   |     | Secondary_organic_aerosol_particulate_matter_with_diameter_below_2.5_um_RH_35
   AOD550_CLOUD                    | 1              | xy  |   |    |   |   |     | cloud_optical_depth
   AOD550_DUST                     | 1              | xy  |   |    |   |   |     | dust_optical_depth_at_550nm
   AOD550_SULFATE                  | 1              | xy  |   |    |   |   |     | sulfate_optical_depth_at_550nm
@@ -241,6 +241,7 @@
   NO2_sensitivity                 | 1              | xyz | C |    |   |   |     | NO2_sensitivity
   NO_sensitivity                  | 1              | xyz | C |    |   |   |     | NO_sensitivity
   NOy	                          | mol mol-1      | xyz | C |    |   |   |	| reactive_nitrogen_=_NO_NO2_HNO3_HNO4_HONO_2xN2O5_PAN_OrganicNitrates_AerosolNitrates
+  Bry	                          | mol mol-1      | xyz | C |    |   |   |	| inorganic_bromine_=_2xBr2_Br_BrO_HOBr_HBr_BrNO2_BrNO3_BrCl_IBr
   DryDepRa2m                      | s cm-1         | xy  |   |    |   |   |     | 2_meter_aerodynamic_resistance 
   DryDepRa10m                     | s cm-1         | xy  |   |    |   |   |     | 10_meter_aerodynamic_resistance 
   MoninObukhov                    | m              | xy  |   |    |   |   |     | Monin_Obukhov_length 
