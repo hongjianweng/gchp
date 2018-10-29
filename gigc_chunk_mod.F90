@@ -1160,18 +1160,16 @@ CONTAINS
        if(am_I_Root.and.NCALLS<10) write(*,*) ' --- Turbulence done!'
     ENDIF
 
-! GEOS-5 sets CH4 values only if phase is not 2, and routine expects state_diag:
     ! Set tropospheric CH4 concentrations and fill species array with
     ! current values. 
-!    IF ( DoTurb .OR. DoTend ) THEN
-!      IF ( Input_Opt%LCH4SBC ) THEN
-          IF ( Phase /= 2 ) THEN
-            CALL SET_CH4 ( am_I_Root, Input_Opt, State_Met, State_Chm, &
-                           State_Diag, RC )
-            ASSERT_(RC==GC_SUCCESS)
-          ENDIF
-!      ENDIF
-!    ENDIF
+    ! ckeller, 2018/10/26: only if CH4 emissions are disabled in input.geos 
+    IF ( .NOT. Input_Opt%LCH4EMIS ) THEN
+       IF ( DoTurb .OR. DoTend ) THEN
+          CALL SET_CH4 ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+                         State_Diag, RC )
+          ASSERT_(RC==GC_SUCCESS)
+       ENDIF
+    ENDIF
 ! GCHP also checks if a full chem simulation and CH4 is a species. Note that
 ! it does not yet accept State_Diag:
 !    ! Set tropospheric CH4 concentrations and fill species array with
@@ -1718,37 +1716,13 @@ CONTAINS
        ENDIF
     ENDIF
 
-    ! Wet deposition in convection (collapse to 2D)
-    IF ( Phase /= 2 ) THEN
-       IF ( ASSOCIATED(State_Diag%WetLossConv) ) THEN
-          DO I = 1, State_Chm%nWetDep
-             N = State_Chm%Map_WetDep(I)
-             DiagName = 'WetLossConv_'//TRIM(State_Chm%SpcData(N)%Info%Name)
-             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
-             IF ( ASSOCIATED(Ptr2D) ) THEN
-                Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3)
-                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
-                Ptr2D => NULL()
-             END IF
-             DiagName = 'WetLossConv3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
-             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
-             IF ( ASSOCIATED(Ptr3D) ) THEN
-                DO L = 1,LM
-                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:,1)
-                ENDDO
-                Ptr3D => NULL()
-             END IF
-          ENDDO
-       ENDIF
-       ! Reset diagnostics
-       !!!State_Diag%WetLossConv(:,:,:,:) = 0.0_f4
-    ENDIF
-
-    ! Wet deposition in large scale precip/washout(collapse to 2D)
+    ! Wet deposition
     IF ( Phase /= 1 ) THEN
-       IF ( ASSOCIATED(State_Diag%WetLossLS) ) THEN
+       IF ( ASSOCIATED(State_Diag%WetLossLS) .OR. &
+            ASSOCIATED(State_Diag%WetLossConv)     ) THEN
           DO I = 1, State_Chm%nWetDep
              N = State_Chm%Map_WetDep(I)
+             ! Large-scale washout
              DiagName = 'WetLossLS_'//TRIM(State_Chm%SpcData(N)%Info%Name)
              CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
              IF ( ASSOCIATED(Ptr2D) ) THEN
@@ -1764,11 +1738,97 @@ CONTAINS
                 ENDDO
                 Ptr3D => NULL()
              END IF
+             ! Convective washout
+             DiagName = 'WetLossConv_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+             IF ( ASSOCIATED(Ptr2D) ) THEN
+                Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3)
+                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+                Ptr2D => NULL()
+             END IF
+             DiagName = 'WetLossConv3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+             IF ( ASSOCIATED(Ptr3D) ) THEN
+                DO L = 1,LM
+                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+                ENDDO
+                Ptr3D => NULL()
+             END IF
+             ! Total washout
+             DiagName = 'WetLossTot_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+             IF ( ASSOCIATED(Ptr2D) ) THEN
+                Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3) &
+                           + SUM(State_Diag%WetLossLS  (:,:,:,I),DIM=3)
+                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+                Ptr2D => NULL()
+             END IF
+             DiagName = 'WetLossTot3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+             IF ( ASSOCIATED(Ptr3D) ) THEN
+                DO L = 1,LM
+                   Ptr3D(:,:,LM-L+1) = ( State_Diag%WetLossConv(:,:,L,I) + &
+                                         State_Diag%WetLossLS  (:,:,L,I) ) / State_Met%AREA_M2(:,:,1)
+                ENDDO
+                Ptr3D => NULL()
+             END IF
           ENDDO
        ENDIF
        ! Reset diagnostics
        !!!State_Diag%WetLossLS(:,:,:,:) = 0.0_f4
     ENDIF
+
+!    ! Wet deposition in convection (collapse to 2D)
+!    IF ( Phase /= 2 ) THEN
+!       IF ( ASSOCIATED(State_Diag%WetLossConv) ) THEN
+!          DO I = 1, State_Chm%nWetDep
+!             N = State_Chm%Map_WetDep(I)
+!             DiagName = 'WetLossConv_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+!             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+!             IF ( ASSOCIATED(Ptr2D) ) THEN
+!                Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3)
+!                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+!                Ptr2D => NULL()
+!             END IF
+!             DiagName = 'WetLossConv3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+!             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+!             IF ( ASSOCIATED(Ptr3D) ) THEN
+!                DO L = 1,LM
+!                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+!                ENDDO
+!                Ptr3D => NULL()
+!             END IF
+!          ENDDO
+!       ENDIF
+!       ! Reset diagnostics
+!       !!!State_Diag%WetLossConv(:,:,:,:) = 0.0_f4
+!    ENDIF
+!
+!    ! Wet deposition in large scale precip/washout(collapse to 2D)
+!    IF ( Phase /= 1 ) THEN
+!       IF ( ASSOCIATED(State_Diag%WetLossLS) ) THEN
+!          DO I = 1, State_Chm%nWetDep
+!             N = State_Chm%Map_WetDep(I)
+!             DiagName = 'WetLossLS_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+!             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+!             IF ( ASSOCIATED(Ptr2D) ) THEN
+!                Ptr2D(:,:) = SUM(State_Diag%WetLossLS(:,:,:,I),DIM=3)
+!                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+!                Ptr2D => NULL()
+!             END IF
+!             DiagName = 'WetLossLS3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
+!             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+!             IF ( ASSOCIATED(Ptr3D) ) THEN
+!                DO L = 1,LM
+!                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossLS(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+!                ENDDO
+!                Ptr3D => NULL()
+!             END IF
+!          ENDDO
+!       ENDIF
+!       ! Reset diagnostics
+!       !!!State_Diag%WetLossLS(:,:,:,:) = 0.0_f4
+!    ENDIF
 
     ! Strat. aerosol surface densities 
     IF ( ASSOCIATED(State_Diag%AerSurfAreaDust) ) THEN
