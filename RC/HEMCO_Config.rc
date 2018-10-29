@@ -48,8 +48,7 @@ BEGIN SECTION EXTENSION SWITCHES
     --> SEABIRDS          :       true
     --> DICE_AFRICA       :       true 
     --> TRASH             :       true
-    --> AEIC              :       true
-    --> OMI_HTAP_SO2      :       false
+    --> OMI_HTAP_SO2      :       true
     --> +UValbedo+        :       true
     --> +TOMS_SBUV_O3+    :       true
     --> +LinStratChem+    :       true
@@ -64,7 +63,7 @@ BEGIN SECTION EXTENSION SWITCHES
 ###    --> OTD-LIS scaling   :       0.634
 #C720   --> OTD-LIS scaling   :       1.4152E-3
 #C180   --> OTD-LIS scaling   :       1.527e-2
-    --> OTD-LIS scaling   :       7.024e-3
+    --> OTD-LIS scaling   :       6.32e-3
     --> CDF table         :       /discover/nobackup/cakelle2/data/light_dist.ott2010.dat
     --> Use CNV_FRC       :       false
     --> OTD-LIS factors   :       false
@@ -134,10 +133,10 @@ BEGIN SECTION BASE EMISSIONS
 #=======================================================================================================================================
 # --- HTAP ---
 #=======================================================================================================================================
-0 HTAP_NO_IND ~/data/EDGAR_HTAP_NO_INDUSTRY.generic.01x01.nc    emi_no  2010/1-12/1/0 C xy kg/m2/s NO  201/211 1 1
-0 HTAP_NO_POW ~/data/EDGAR_HTAP_NO_ENERGY.generic.01x01.nc      emi_no  2010/1-12/1/0 C xy kg/m2/s NO  202/212 2 1
-0 HTAP_NO_TRA ~/data/EDGAR_HTAP_NO_TRANSPORT.generic.01x01.nc   emi_no  2010/1-12/1/0 C xy kg/m2/s NO  203/213 3 1
-0 HTAP_NO_RES ~/data/EDGAR_HTAP_NO_RESIDENTIAL.generic.01x01.nc emi_no  2010/1-12/1/0 C xy kg/m2/s NO  204/214 4 1
+0 HTAP_NO_IND ~/data/EDGAR_HTAP_NO_INDUSTRY.generic.01x01.nc    emi_no  2010/1-12/1/0 C xy kg/m2/s NO  201/211/341 1 1
+0 HTAP_NO_POW ~/data/EDGAR_HTAP_NO_ENERGY.generic.01x01.nc      emi_no  2010/1-12/1/0 C xy kg/m2/s NO  202/212/341 2 1
+0 HTAP_NO_TRA ~/data/EDGAR_HTAP_NO_TRANSPORT.generic.01x01.nc   emi_no  2010/1-12/1/0 C xy kg/m2/s NO  203/213/341 3 1
+0 HTAP_NO_RES ~/data/EDGAR_HTAP_NO_RESIDENTIAL.generic.01x01.nc emi_no  2010/1-12/1/0 C xy kg/m2/s NO  204/214/341 4 1
 
 0 HTAP_CO_IND ~/data/EDGAR_HTAP_CO_INDUSTRY.generic.01x01.nc    emi_co  2010/1-12/1/0 C xy kg/m2/s CO   301/201/211     1 1
 0 HTAP_SOAP_IND  -                                              -       -             - -  -       SOAP 301/201/211/280 1 1
@@ -238,89 +237,89 @@ BEGIN SECTION BASE EMISSIONS
 # --- DICE Africa emissions ---
 #=======================================================================================================================================
 (((DICE_AFRICA
-0 DICE_INDUSTRY_CO    /see/ExtData.rc CO    2013/1/1/0 C xy kg/m2/s  CO    201/211/402/1008       11 3
-0 DICE_INDUSTRY_SOAP  -               -     -          - -  -        SOAP  201/211/402/1008       11 3
-0 DICE_INDUSTRY_NO    /see/ExtData.rc NO    2013/1/1/0 C xy kg/m2/s  NO    201/211/406/1008       11 3
-0 DICE_INDUSTRY_SO2   /see/ExtData.rc SO2   2013/1/1/0 C xy kg/m2/s  SO2   78/201/211/410/1008    11 3
-0 DICE_INDUSTRY_SO4   -               -     -          - -  -        SO4   63/201/211/410/1008    11 3
-0 DICE_INDUSTRY_pFe   -               -     -          - -  -        pFe   78/66/201/211/410/1008 11 3
-0 DICE_INDUSTRY_BCPI  /see/ExtData.rc BC    2013/1/1/0 C xy kg/m2/s  BCPI  70/201/211/402/1008    11 3
-0 DICE_INDUSTRY_BCPO  -               -     -          - -  -        BCPO  71/201/211/402/1008    11 3
-0 DICE_INDUSTRY_OCPI  /see/ExtData.rc OC    2013/1/1/0 C xy kg/m2/s  OCPI  72/201/211/402/1008    11 3
-0 DICE_INDUSTRY_OCPO  -               -     -          - -  -        OCPO  73/201/211/402/1008    11 3
-0 DICE_INDUSTRY_PRPE  /see/ExtData.rc PRPE  2013/1/1/0 C xy kgC/m2/s PRPE  201/211/402/1008       11 3
-0 DICE_INDUSTRY_CH2O  /see/ExtData.rc CH2O  2013/1/1/0 C xy kg/m2/s  CH2O  201/211/402/1008       11 3
-#0 DICE_INDUSTRY_C2H4  /see/ExtData.rc C2H4  2013/1/1/0 C xy kgC/m2/s C2H4  201/211/402/1008      11 3
-#0 DICE_INDUSTRY_C2H2  /see/ExtData.rc C2H2  2013/1/1/0 C xy kgC/m2/s C2H2  201/211/402/1008      11 3
-0 DICE_INDUSTRY_C2H6  /see/ExtData.rc C2H6  2013/1/1/0 C xy kgC/m2/s C2H6  201/211/402/1008       11 3
-0 DICE_INDUSTRY_TOLU  /see/ExtData.rc TOLU  2013/1/1/0 C xy kgC/m2/s TOLU  201/211/402/1008       11 3
-0 DICE_INDUSTRY_HCOOH /see/ExtData.rc HCOOH 2013/1/1/0 C xy kgC/m2/s HCOOH 201/211/402/1008       11 3
-#0 DICE_INDUSTRY_MOH   /see/ExtData.rc MOH   2013/1/1/0 C xy kgC/m2/s MOH   201/211/402/1008      11 3
-0 DICE_INDUSTRY_NH3   /see/ExtData.rc NH3   2013/1/1/0 C xy kg/m2/s  NH3   201/211/1008           11 3
+0 DICE_INDUSTRY_CO    /see/ExtData.rc CO    2013/1/1/0 C xy kg/m2/s  CO    201/211/351/402/1008       11 3
+0 DICE_INDUSTRY_SOAP  -               -     -          - -  -        SOAP  201/211/351/402/1008       11 3
+0 DICE_INDUSTRY_NO    /see/ExtData.rc NO    2013/1/1/0 C xy kg/m2/s  NO    201/211/351/406/1008       11 3
+0 DICE_INDUSTRY_SO2   /see/ExtData.rc SO2   2013/1/1/0 C xy kg/m2/s  SO2   78/201/211/351/410/1008    11 3
+0 DICE_INDUSTRY_SO4   -               -     -          - -  -        SO4   63/201/211/351/410/1008    11 3
+0 DICE_INDUSTRY_pFe   -               -     -          - -  -        pFe   78/66/201/211/351/410/1008 11 3
+0 DICE_INDUSTRY_BCPI  /see/ExtData.rc BC    2013/1/1/0 C xy kg/m2/s  BCPI  70/201/211/351/402/1008    11 3
+0 DICE_INDUSTRY_BCPO  -               -     -          - -  -        BCPO  71/201/211/351/402/1008    11 3
+0 DICE_INDUSTRY_OCPI  /see/ExtData.rc OC    2013/1/1/0 C xy kg/m2/s  OCPI  72/201/211/351/402/1008    11 3
+0 DICE_INDUSTRY_OCPO  -               -     -          - -  -        OCPO  73/201/211/351/402/1008    11 3
+0 DICE_INDUSTRY_PRPE  /see/ExtData.rc PRPE  2013/1/1/0 C xy kgC/m2/s PRPE  201/211/351/402/1008       11 3
+0 DICE_INDUSTRY_CH2O  /see/ExtData.rc CH2O  2013/1/1/0 C xy kg/m2/s  CH2O  201/211/351/402/1008       11 3
+#0 DICE_INDUSTRY_C2H4  /see/ExtData.rc C2H4  2013/1/1/0 C xy kgC/m2/s C2H4  201/211/351/402/1008      11 3
+#0 DICE_INDUSTRY_C2H2  /see/ExtData.rc C2H2  2013/1/1/0 C xy kgC/m2/s C2H2  201/211/351/402/1008      11 3
+0 DICE_INDUSTRY_C2H6  /see/ExtData.rc C2H6  2013/1/1/0 C xy kgC/m2/s C2H6  201/211/351/402/1008       11 3
+0 DICE_INDUSTRY_TOLU  /see/ExtData.rc TOLU  2013/1/1/0 C xy kgC/m2/s TOLU  201/211/351/402/1008       11 3
+0 DICE_INDUSTRY_HCOOH /see/ExtData.rc HCOOH 2013/1/1/0 C xy kgC/m2/s HCOOH 201/211/351/402/1008       11 3
+#0 DICE_INDUSTRY_MOH   /see/ExtData.rc MOH   2013/1/1/0 C xy kgC/m2/s MOH   201/211/351/402/1008      11 3
+0 DICE_INDUSTRY_NH3   /see/ExtData.rc NH3   2013/1/1/0 C xy kg/m2/s  NH3   201/211/351/1008           11 3
 
-0 DICE_ENERGY_CO     /see/ExtData.rc CO   2013/1/1/0 C xy kg/m2/s  CO   202/212/403/1008       12 3
-0 DICE_ENERGY_SOAP   -               -    -          - -  -        SOAP 202/212/403/1008       12 3
-0 DICE_ENERGY_NO     /see/ExtData.rc NO   2013/1/1/0 C xy kg/m2/s  NO   202/212/407/1008       12 3
-0 DICE_ENERGY_SO2    /see/ExtData.rc SO2  2013/1/1/0 C xy kg/m2/s  SO2  78/202/212/411/1008    12 3
-0 DICE_ENERGY_SO4    -               -    -          - -  -        SO4  63/202/212/411/1008    12 3
-0 DICE_ENERGY_pFe    -               -    -          - -  -        pFe  78/66/202/212/411/1008 12 3
-0 DICE_ENERGY_BCPI   /see/ExtData.rc BC   2013/1/1/0 C xy kg/m2/s  BCPI 70/202/212/403/1008    12 3
-0 DICE_ENERGY_BCPO   -               -    -          - -  -        BCPO 71/202/212/403/1008    12 3
-0 DICE_ENERGY_OCPI   /see/ExtData.rc OC   2013/1/1/0 C xy kg/m2/s  OCPI 72/202/212/403/1008    12 3
-0 DICE_ENERGY_OCPO   -               -    -          - -  -        OCPO 73/202/212/403/1008    12 3
-0 DICE_ENERGY_ALK4   /see/ExtData.rc ALK4 2013/1/1/0 C xy kgC/m2/s ALK4 202/212/403/1008       12 3
-0 DICE_ENERGY_ACET   /see/ExtData.rc ACET 2013/1/1/0 C xy kgC/m2/s ACET 202/212/403/1008       12 3
-0 DICE_ENERGY_MEK    /see/ExtData.rc MEK  2013/1/1/0 C xy kgC/m2/s MEK  202/212/403/1008       12 3
-0 DICE_ENERGY_ALD2   /see/ExtData.rc ALD2 2013/1/1/0 C xy kgC/m2/s ALD2 202/212/403/1008       12 3
-0 DICE_ENERGY_RCHO   /see/ExtData.rc RCHO 2013/1/1/0 C xy kgC/m2/s RCHO 202/212/403/1008       12 3
-0 DICE_ENERGY_CH2O   /see/ExtData.rc CH2O 2013/1/1/0 C xy kg/m2/s  CH2O 202/212/403/1008       12 3
-0 DICE_ENERGY_BENZ   /see/ExtData.rc BENZ 2013/1/1/0 C xy kgC/m2/s BENZ 202/212/403/1008       12 3
-0 DICE_ENERGY_TOLU   /see/ExtData.rc TOLU 2013/1/1/0 C xy kgC/m2/s TOLU 202/212/403/1008       12 3
-0 DICE_ENERGY_XYLE   /see/ExtData.rc XYLE 2013/1/1/0 C xy kgC/m2/s XYLE 202/212/403/1008       12 3
-0 DICE_ENERGY_C2H6   /see/ExtData.rc C2H6 2013/1/1/0 C xy kgC/m2/s C2H6 202/212/403/1008       12 3
-0 DICE_ENERGY_C3H8   /see/ExtData.rc C3H8 2013/1/1/0 C xy kgC/m2/s C3H8 202/212/403/1008       12 3
+0 DICE_ENERGY_CO     /see/ExtData.rc CO   2013/1/1/0 C xy kg/m2/s  CO   202/212/351/403/1008       12 3
+0 DICE_ENERGY_SOAP   -               -    -          - -  -        SOAP 202/212/351/403/1008       12 3
+0 DICE_ENERGY_NO     /see/ExtData.rc NO   2013/1/1/0 C xy kg/m2/s  NO   202/212/351/407/1008       12 3
+0 DICE_ENERGY_SO2    /see/ExtData.rc SO2  2013/1/1/0 C xy kg/m2/s  SO2  78/202/212/351/411/1008    12 3
+0 DICE_ENERGY_SO4    -               -    -          - -  -        SO4  63/202/212/351/411/1008    12 3
+0 DICE_ENERGY_pFe    -               -    -          - -  -        pFe  78/66/202/212/351/411/1008 12 3
+0 DICE_ENERGY_BCPI   /see/ExtData.rc BC   2013/1/1/0 C xy kg/m2/s  BCPI 70/202/212/351/403/1008    12 3
+0 DICE_ENERGY_BCPO   -               -    -          - -  -        BCPO 71/202/212/351/403/1008    12 3
+0 DICE_ENERGY_OCPI   /see/ExtData.rc OC   2013/1/1/0 C xy kg/m2/s  OCPI 72/202/212/351/403/1008    12 3
+0 DICE_ENERGY_OCPO   -               -    -          - -  -        OCPO 73/202/212/351/403/1008    12 3
+0 DICE_ENERGY_ALK4   /see/ExtData.rc ALK4 2013/1/1/0 C xy kgC/m2/s ALK4 202/212/351/403/1008       12 3
+0 DICE_ENERGY_ACET   /see/ExtData.rc ACET 2013/1/1/0 C xy kgC/m2/s ACET 202/212/351/403/1008       12 3
+0 DICE_ENERGY_MEK    /see/ExtData.rc MEK  2013/1/1/0 C xy kgC/m2/s MEK  202/212/351/403/1008       12 3
+0 DICE_ENERGY_ALD2   /see/ExtData.rc ALD2 2013/1/1/0 C xy kgC/m2/s ALD2 202/212/351/403/1008       12 3
+0 DICE_ENERGY_RCHO   /see/ExtData.rc RCHO 2013/1/1/0 C xy kgC/m2/s RCHO 202/212/351/403/1008       12 3
+0 DICE_ENERGY_CH2O   /see/ExtData.rc CH2O 2013/1/1/0 C xy kg/m2/s  CH2O 202/212/351/403/1008       12 3
+0 DICE_ENERGY_BENZ   /see/ExtData.rc BENZ 2013/1/1/0 C xy kgC/m2/s BENZ 202/212/351/403/1008       12 3
+0 DICE_ENERGY_TOLU   /see/ExtData.rc TOLU 2013/1/1/0 C xy kgC/m2/s TOLU 202/212/351/403/1008       12 3
+0 DICE_ENERGY_XYLE   /see/ExtData.rc XYLE 2013/1/1/0 C xy kgC/m2/s XYLE 202/212/351/403/1008       12 3
+0 DICE_ENERGY_C2H6   /see/ExtData.rc C2H6 2013/1/1/0 C xy kgC/m2/s C2H6 202/212/351/403/1008       12 3
+0 DICE_ENERGY_C3H8   /see/ExtData.rc C3H8 2013/1/1/0 C xy kgC/m2/s C3H8 202/212/351/403/1008       12 3
 
-0 DICE_TRAFFIC_CO    /see/ExtData.rc CO   2013/1/1/0 C xy kg/m2/s  CO   203/213/401/1008       3 3
-0 DICE_TRAFFIC_SOAP  -               -    -          - -  -        SOAP 203/213/401/1008       3 3
-0 DICE_TRAFFIC_NO    /see/ExtData.rc NO   2013/1/1/0 C xy kg/m2/s  NO   203/213/405/1008       3 3
-0 DICE_TRAFFIC_SO2   /see/ExtData.rc SO2  2013/1/1/0 C xy kg/m2/s  SO2  78/203/213/409/1008    3 3
-0 DICE_TRAFFIC_SO4   -               -    -          - -  -        SO4  63/203/213/409/1008    3 3
-0 DICE_TRAFFIC_pFe   -               -    -          - -  -        pFe  78/66/203/213/409/1008 3 3
-0 DICE_TRAFFIC_BCPI  /see/ExtData.rc BC   2013/1/1/0 C xy kg/m2/s  BCPI 70/203/213/401/1008    3 3
-0 DICE_TRAFFIC_BCPO  -               -    -          - -  -        BCPO 71/203/213/401/1008    3 3
-0 DICE_TRAFFIC_OCPI  /see/ExtData.rc OC   2013/1/1/0 C xy kg/m2/s  OCPI 72/203/213/401/1008    3 3
-0 DICE_TRAFFIC_OCPO  -               -    -          - -  -        OCPO 73/203/213/401/1008    3 3
-0 DICE_TRAFFIC_ALK4  /see/ExtData.rc ALK4 2013/1/1/0 C xy kgC/m2/s ALK4 203/213/401/1008       3 3
-0 DICE_TRAFFIC_ISOP  /see/ExtData.rc ISOP 2013/1/1/0 C xy kgC/m2/s ISOP 203/213/401/1008       3 3
-0 DICE_TRAFFIC_ACET  /see/ExtData.rc ACET 2013/1/1/0 C xy kgC/m2/s ACET 203/213/401/1008       3 3
-0 DICE_TRAFFIC_MEK   /see/ExtData.rc MEK  2013/1/1/0 C xy kgC/m2/s MEK  203/213/401/1008       3 3
-0 DICE_TRAFFIC_ALD2  /see/ExtData.rc ALD2 2013/1/1/0 C xy kgC/m2/s ALD2 203/213/401/1008       3 3
-0 DICE_TRAFFIC_RCHO  /see/ExtData.rc RCHO 2013/1/1/0 C xy kgC/m2/s RCHO 203/213/401/1008       3 3
-0 DICE_TRAFFIC_PRPE  /see/ExtData.rc PRPE 2013/1/1/0 C xy kgC/m2/s PRPE 203/213/401/1008       3 3
-0 DICE_TRAFFIC_CH2O  /see/ExtData.rc CH2O 2013/1/1/0 C xy kg/m2/s  CH2O 203/213/401/1008       3 3
-#0 DICE_TRAFFIC_C2H4  /see/ExtData.rc C2H4 2013/1/1/0 C xy kgC/m2/s C2H4 203/213/401/1008      3 3
-0 DICE_TRAFFIC_BENZ  /see/ExtData.rc BENZ 2013/1/1/0 C xy kgC/m2/s BENZ 203/213/401/1008       3 3
-0 DICE_TRAFFIC_TOLU  /see/ExtData.rc TOLU 2013/1/1/0 C xy kgC/m2/s TOLU 203/213/401/1008       3 3
-0 DICE_TRAFFIC_XYLE  /see/ExtData.rc XYLE 2013/1/1/0 C xy kgC/m2/s XYLE 203/213/401/1008       3 3
+0 DICE_TRAFFIC_CO    /see/ExtData.rc CO   2013/1/1/0 C xy kg/m2/s  CO   203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_SOAP  -               -    -          - -  -        SOAP 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_NO    /see/ExtData.rc NO   2013/1/1/0 C xy kg/m2/s  NO   203/213/351/405/1008       3 3
+0 DICE_TRAFFIC_SO2   /see/ExtData.rc SO2  2013/1/1/0 C xy kg/m2/s  SO2  78/203/213/351/409/1008    3 3
+0 DICE_TRAFFIC_SO4   -               -    -          - -  -        SO4  63/203/213/351/409/1008    3 3
+0 DICE_TRAFFIC_pFe   -               -    -          - -  -        pFe  78/66/203/213/351/409/1008 3 3
+0 DICE_TRAFFIC_BCPI  /see/ExtData.rc BC   2013/1/1/0 C xy kg/m2/s  BCPI 70/203/213/351/401/1008    3 3
+0 DICE_TRAFFIC_BCPO  -               -    -          - -  -        BCPO 71/203/213/351/401/1008    3 3
+0 DICE_TRAFFIC_OCPI  /see/ExtData.rc OC   2013/1/1/0 C xy kg/m2/s  OCPI 72/203/213/351/401/1008    3 3
+0 DICE_TRAFFIC_OCPO  -               -    -          - -  -        OCPO 73/203/213/351/401/1008    3 3
+0 DICE_TRAFFIC_ALK4  /see/ExtData.rc ALK4 2013/1/1/0 C xy kgC/m2/s ALK4 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_ISOP  /see/ExtData.rc ISOP 2013/1/1/0 C xy kgC/m2/s ISOP 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_ACET  /see/ExtData.rc ACET 2013/1/1/0 C xy kgC/m2/s ACET 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_MEK   /see/ExtData.rc MEK  2013/1/1/0 C xy kgC/m2/s MEK  203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_ALD2  /see/ExtData.rc ALD2 2013/1/1/0 C xy kgC/m2/s ALD2 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_RCHO  /see/ExtData.rc RCHO 2013/1/1/0 C xy kgC/m2/s RCHO 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_PRPE  /see/ExtData.rc PRPE 2013/1/1/0 C xy kgC/m2/s PRPE 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_CH2O  /see/ExtData.rc CH2O 2013/1/1/0 C xy kg/m2/s  CH2O 203/213/351/401/1008       3 3
+#0 DICE_TRAFFIC_C2H4  /see/ExtData.rc C2H4 2013/1/1/0 C xy kgC/m2/s C2H4 203/213/351/401/1008      3 3
+0 DICE_TRAFFIC_BENZ  /see/ExtData.rc BENZ 2013/1/1/0 C xy kgC/m2/s BENZ 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_TOLU  /see/ExtData.rc TOLU 2013/1/1/0 C xy kgC/m2/s TOLU 203/213/351/401/1008       3 3
+0 DICE_TRAFFIC_XYLE  /see/ExtData.rc XYLE 2013/1/1/0 C xy kgC/m2/s XYLE 203/213/351/401/1008       3 3
 
-0 DICE_RESIDENTIAL_CO    /see/ExtData.rc CO    2013/1/1/0 C xy kg/m2/s  CO    204/214/404/1008       4 3
-0 DICE_RESIDENTIAL_SOAP  -               -     -          - -  -        SOAP  204/214/404/1008       4 3
-0 DICE_RESIDENTIAL_NO    /see/ExtData.rc NO    2013/1/1/0 C xy kg/m2/s  NO    204/214/408/1008       4 3
-0 DICE_RESIDENTIAL_SO2   /see/ExtData.rc SO2   2013/1/1/0 C xy kg/m2/s  SO2   78/204/214/412/1008    4 3
-0 DICE_RESIDENTIAL_SO4   -               -     -          - -  -        SO4   63/204/214/412/1008    4 3
-0 DICE_RESIDENTIAL_pFe   -               -     -          - -  -        pFe   78/66/204/214/412/1008 4 3
-0 DICE_RESIDENTIAL_BCPI  /see/ExtData.rc BC    2013/1/1/0 C xy kg/m2/s  BCPI  70/204/214/404/1008    4 3
-0 DICE_RESIDENTIAL_BCPO  -               -     -          - -  -        BCPO  71/204/214/404/1008    4 3
-0 DICE_RESIDENTIAL_OCPI  /see/ExtData.rc OC    2013/1/1/0 C xy kg/m2/s  OCPI  72/204/214/404/1008    4 3
-0 DICE_RESIDENTIAL_OCPO  -               -     -          - -  -        OCPO  73/204/214/404/1008    4 3
-0 DICE_RESIDENTIAL_ALK4  /see/ExtData.rc ALK4  2013/1/1/0 C xy kgC/m2/s ALK4  204/214/404/1008       4 3
-0 DICE_RESIDENTIAL_PRPE  /see/ExtData.rc PRPE  2013/1/1/0 C xy kgC/m2/s PRPE  204/214/404/1008       4 3
-0 DICE_RESIDENTIAL_CH2O  /see/ExtData.rc CH2O  2013/1/1/0 C xy kg/m2/s  CH2O  204/214/404/1008       4 3
-#0 DICE_RESIDENTIAL_C2H4  /see/ExtData.rc C2H4  2013/1/1/0 C xy kgC/m2/s C2H4  204/214/404/1008      4 3
-#0 DICE_RESIDENTIAL_C2H2  /see/ExtData.rc C2H2  2013/1/1/0 C xy kgC/m2/s C2H2  204/214/404/1008      4 3
-#0 DICE_RESIDENTIAL_MOH   /see/ExtData.rc MOH   2013/1/1/0 C xy kgC/m2/s MOH   204/214/404/1008      4 3
-0 DICE_RESIDENTIAL_HCOOH /see/ExtData.rc HCOOH 2013/1/1/0 C xy kgC/m2/s HCOOH 204/214/404/1008       4 3
-0 DICE_RESIDENTIAL_NH3   /see/ExtData.rc NH3   2013/1/1/0 C xy kgC/m2/s NH3   204/214/1008           4 3
+0 DICE_RESIDENTIAL_CO    /see/ExtData.rc CO    2013/1/1/0 C xy kg/m2/s  CO    204/214/351/404/1008       4 3
+0 DICE_RESIDENTIAL_SOAP  -               -     -          - -  -        SOAP  204/214/351/404/1008       4 3
+0 DICE_RESIDENTIAL_NO    /see/ExtData.rc NO    2013/1/1/0 C xy kg/m2/s  NO    204/214/351/408/1008       4 3
+0 DICE_RESIDENTIAL_SO2   /see/ExtData.rc SO2   2013/1/1/0 C xy kg/m2/s  SO2   78/204/214/351/412/1008    4 3
+0 DICE_RESIDENTIAL_SO4   -               -     -          - -  -        SO4   63/204/214/351/412/1008    4 3
+0 DICE_RESIDENTIAL_pFe   -               -     -          - -  -        pFe   78/66/204/214/351/412/1008 4 3
+0 DICE_RESIDENTIAL_BCPI  /see/ExtData.rc BC    2013/1/1/0 C xy kg/m2/s  BCPI  70/204/214/351/404/1008    4 3
+0 DICE_RESIDENTIAL_BCPO  -               -     -          - -  -        BCPO  71/204/214/351/404/1008    4 3
+0 DICE_RESIDENTIAL_OCPI  /see/ExtData.rc OC    2013/1/1/0 C xy kg/m2/s  OCPI  72/204/214/351/404/1008    4 3
+0 DICE_RESIDENTIAL_OCPO  -               -     -          - -  -        OCPO  73/204/214/351/404/1008    4 3
+0 DICE_RESIDENTIAL_ALK4  /see/ExtData.rc ALK4  2013/1/1/0 C xy kgC/m2/s ALK4  204/214/351/404/1008       4 3
+0 DICE_RESIDENTIAL_PRPE  /see/ExtData.rc PRPE  2013/1/1/0 C xy kgC/m2/s PRPE  204/214/351/404/1008       4 3
+0 DICE_RESIDENTIAL_CH2O  /see/ExtData.rc CH2O  2013/1/1/0 C xy kg/m2/s  CH2O  204/214/351/404/1008       4 3
+#0 DICE_RESIDENTIAL_C2H4  /see/ExtData.rc C2H4  2013/1/1/0 C xy kgC/m2/s C2H4  204/214/351/404/1008      4 3
+#0 DICE_RESIDENTIAL_C2H2  /see/ExtData.rc C2H2  2013/1/1/0 C xy kgC/m2/s C2H2  204/214/351/404/1008      4 3
+#0 DICE_RESIDENTIAL_MOH   /see/ExtData.rc MOH   2013/1/1/0 C xy kgC/m2/s MOH   204/214/351/404/1008      4 3
+0 DICE_RESIDENTIAL_HCOOH /see/ExtData.rc HCOOH 2013/1/1/0 C xy kgC/m2/s HCOOH 204/214/351/404/1008       4 3
+0 DICE_RESIDENTIAL_NH3   /see/ExtData.rc NH3   2013/1/1/0 C xy kgC/m2/s NH3   204/214/351/1008           4 3
 )))DICE_AFRICA
 
 #=======================================================================================================================================
@@ -412,7 +411,6 @@ BEGIN SECTION BASE EMISSIONS
 #=======================================================================================================================================
 ## --- AEIC aircraft emissions ---
 #=======================================================================================================================================
-(((AEIC
 0 AEIC_NO   ~/data/aeic_2005.geos.1x1.72L.nc  NO       2005/1-12/1/0 C xyz kg/m2/s NO   110/115 20 1
 0 AEIC_CO   ~/data/aeic_2005.geos.1x1.72L.nc  CO       2005/1-12/1/0 C xyz kg/m2/s CO   110     20 1
 0 AEIC_SOAP -                                 -        -             - -   -       SOAP 110/280 20 1  
@@ -429,7 +427,6 @@ BEGIN SECTION BASE EMISSIONS
 0 AEIC_PRPE -                                 -        -             - -   -       PRPE 114/107 20 1
 0 AEIC_MACR -                                 -        -             - -   -       MACR 114/108 20 1
 0 AEIC_RCHO -                                 -        -             - -   -       RCHO 114/109 20 1
-)))AEIC
 
 #==============================================================================
 # --- Very-short-lived (VSL) iodocarbon emissions (cf. Carlos Ordonez) ---
@@ -453,26 +450,45 @@ BEGIN SECTION BASE EMISSIONS
 # --- QFED biomass burning --- 
 #=======================================================================================================================================
 (((QFED
-0 QFED_ACET  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_acet.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s ACET 75    8 1
-0 QFED_ALD2  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ald2.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s ALD2 75    8 1
-0 QFED_ALK4  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_alk4.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s ALK4 75    8 1
-0 QFED_BCPI  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_bc.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s BCPI 70/75 8 1
-0 QFED_BCPO  -                                                                 -       -                     - -  -       BCPO 71/75 8 1
-0 QFED_OCPI  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_oc.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s OCPI 72/75 8 1
-0 QFED_OCPO  -                                                                 -       -                     - -  -       OCPO 73/75 8 1
-0 QFED_C2H6  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c2h6.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s C2H6 75    8 1
-0 QFED_C3H8  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c3h8.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s C3H8 75    8 1
-0 QFED_CH2O  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ch2o.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s CH2O 75    8 1
-0 QFED_CO    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_co.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s CO   54/75 8 1
-0 QFED_SOAP  -                                                                 -       -                     - -  -       SOAP 54/75/281 8 1
-0 QFED_NAP   -                                                                 -       -                     - -  -       NAP  54/75/282 8 1
-0 QFED_MEK   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_mek.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s MEK  75    8 1
-0 QFED_NH3   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_nh3.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s NH3  75    8 1
-0 QFED_NO    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_no.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s NO   75    8 1
-0 QFED_SO2   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_so2.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s SO2  75    8 1
-0 QFED_C3H6  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c3h6.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s PRPE 75    8 1
+0 QFED_ACET_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_acet.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s ACET 75/311    8 1
+0 QFED_ACET_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_acet.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s ACET 75/312    8 1
+0 QFED_ALD2_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ald2.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s ALD2 75/311    8 1
+0 QFED_ALD2_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ald2.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s ALD2 75/312    8 1
+0 QFED_ALK4_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_alk4.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s ALK4 75/311    8 1
+0 QFED_ALK4_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_alk4.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s ALK4 75/312    8 1
+0 QFED_BCPI_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_bc.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s BCPI 70/75/311 8 1
+0 QFED_BCPO_SFC  -                                                                 -       -                     - -             -         BCPO 71/75/311 8 1
+0 QFED_BCPI_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_bc.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s BCPI 70/75/312 8 1
+0 QFED_BCPO_FT   -                                                                 -       -                     - -             -         BCPO 71/75/312 8 1
+0 QFED_OCPI_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_oc.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s OCPI 72/75/311 8 1
+0 QFED_OCPO_SFC  -                                                                 -       -                     - -             -         OCPO 73/75/311 8 1
+0 QFED_OCPI_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_oc.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s OCPI 72/75/312 8 1
+0 QFED_OCPO_FT   -                                                                 -       -                     - -             -         OCPO 73/75/312 8 1
+0 QFED_C2H6_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c2h6.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s C2H6 75/311    8 1
+0 QFED_C2H6_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c2h6.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s C2H6 75/312    8 1
+0 QFED_C3H8_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c3h8.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s C3H8 75/311    8 1
+0 QFED_C3H8_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c3h8.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s C3H8 75/312    8 1
+0 QFED_CH2O_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ch2o.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s CH2O 75/311    8 1
+0 QFED_CH2O_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ch2o.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s CH2O 75/312    8 1
+0 QFED_CO_SFC    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_co.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s CO   54/75/311 8 1
+0 QFED_SOAP_SFC  -                                                                 -       -                     - -             -         SOAP 54/75/281/311 8 1
+0 QFED_NAP_SFC   -                                                                 -       -                     - -             -         NAP  54/75/282/311 8 1
+0 QFED_CO_FT     $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_co.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s CO   54/75/312 8 1
+0 QFED_SOAP_FT   -                                                                 -       -                     - -             -         SOAP 54/75/281/312 8 1
+0 QFED_NAP_FT    -                                                                 -       -                     - -             -         NAP  54/75/282/312 8 1
+0 QFED_MEK_SFC   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_mek.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s MEK  75/311    8 1
+0 QFED_MEK_FT    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_mek.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s MEK  75/312    8 1
+0 QFED_NH3_SFC   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_nh3.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s NH3  75/311    8 1
+0 QFED_NH3_FT    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_nh3.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s NH3  75/312    8 1
+0 QFED_NO_SFC    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_no.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s NO   75/311    8 1
+0 QFED_NO_FT     $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_no.006.$YYYY$MM$DD.nc4   biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s NO   75/312    8 1
+0 QFED_SO2_SFC   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_so2.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s SO2  75/311    8 1
+0 QFED_SO2_FT    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_so2.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s SO2  75/312    8 1
+0 QFED_C3H6_SFC  $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c3h6.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s PRPE 75/311    8 1
+0 QFED_C3H6_FT   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_c3h6.006.$YYYY$MM$DD.nc4 biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s PRPE 75/312    8 1
 (((CH4_EMISSIONS
-0 QFED_CH4   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ch4.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xy kg/m2/s CH4  75    8 1
+0 QFED_CH4_SFC   $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ch4.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=1:PBL       kg/m2/s CH4  75/311    8 1
+0 QFED_CH4_FT    $ROOT/QFED/v2014-09/$YYYY/$MM/qfed2.emis_ch4.006.$YYYY$MM$DD.nc4  biomass 2000-2013/1-12/1-31/0 C xyL=PBL:5500m   kg/m2/s CH4  75/312    8 1
 )))CH4_EMISSIONS
 )))QFED
 
@@ -589,7 +605,7 @@ BEGIN SECTION BASE EMISSIONS
 109  CLM4_PFT_C3_NARC_GRSS        ~/data/CLM4_PFT.geos.1x1.nc    PFT_C3_NARC_GRSS        2000/1/1/0    C xy 1        * - 1 1
 109  CLM4_PFT_C4_GRSS             ~/data/CLM4_PFT.geos.1x1.nc    PFT_C4_GRSS             2000/1/1/0    C xy 1        * - 1 1
 109  CLM4_PFT_CROP                ~/data/CLM4_PFT.geos.1x1.nc    PFT_CROP                2000/1/1/0    C xy 1        * - 1 1
-110  MEGAN_ORVC                   ~/data/NVOC.geos.1x1.nc        OCPI                    1990/1-12/1/0 C xy kgC/m2/s * - 1 1
+109  MEGAN_ORVC                   ~/data/NVOC.geos.1x1.nc        OCPI                    1990/1-12/1/0 C xy kgC/m2/s * - 1 1
 
 #==============================================================================
 # --- CH4 wetland and rice emissions (Extension 121) 
@@ -1265,8 +1281,12 @@ BEGIN SECTION SCALE FACTORS
 301 ODIAC_ANNUALSCALE_2010 /see/ExtData.rc LAND 2000-2016/1-12/1/0 C xy unitless 1
 302 ODIAC_ANNUALSCALE_2013 /see/ExtData.rc LAND 2000-2016/1-12/1/0 C xy unitless 1
 
+# --- QFED scale factors ---
+311 QFED_PBL_FRAC 0.65 - - - xy 1 1
+312 QFED_FT_FRAC  0.35 - - - xy 1 1
+
 # --- Annual scale factors derived from OMI NO2 ---
-341 OMINO2_SCALE_2010to2017 /see/ExtData.rc TroposphericNO2 2017/1/1/0 C xy unitless 1
+341 OMINO2_SCALE_2010to2016 /see/ExtData.rc TroposphericNO2 2016/1/1/0 C xy unitless 1
 
 # --- Annual scale factors based on population density
 351 GPW_SCALE_2013to2017 /see/ExtData.rc Population 2017/1/1/0 C xy unitless 1
