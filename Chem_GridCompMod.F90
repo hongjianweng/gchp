@@ -154,6 +154,12 @@ MODULE GEOSCHEMchem_GridCompMod
   LOGICAL                          :: DoANOX
 !----
 
+  ! To set ozone from PCHEM 
+  LOGICAL                          :: LPCHEMO3
+  INTEGER                          :: PCHEMO3L1
+  INTEGER                          :: PCHEMO3L2
+  REAL                             :: PCHEMO3FR 
+
   ! Number of run phases. Can be set in the resource file (default is 2).
   INTEGER                          :: NPHASE
 
@@ -1330,6 +1336,28 @@ CONTAINS
     ENDIF ! DoRATS
 !---
 
+! Analysis ozone import
+    CALL ESMF_ConfigGetAttribute( myState%myCF, I, &
+             Label = "Use_PCHEM_ozone:", Default = 0, __RC__ ) 
+    IF ( I == 1 ) THEN
+       call MAPL_AddImportSpec(GC,                   &
+          SHORT_NAME         = 'PCHEM_O3',           &
+          LONG_NAME          = 'PCHEM_ozone',        &
+          UNITS              = 'kg/kg',              &
+          DIMS               = MAPL_DimsHorzVert,    &
+          VLOCATION          = MAPL_VLocationCenter, &
+          RESTART            = MAPL_RestartSkip,     &
+                                               __RC__ )
+    ENDIF
+    ! Diagnostics for applied ozone increment
+    call MAPL_AddExportSpec(GC,                        &
+       SHORT_NAME         = 'PCHEM_O3_INC',            &
+       LONG_NAME          = 'Applied_ozone_increment', &
+       UNITS              = 'kg/kg',                   &
+       DIMS               = MAPL_DimsHorzVert,         &
+       VLOCATION          = MAPL_VLocationCenter,      &
+                                                 __RC__ )
+ 
 ! GEOS-5 only (should handle diags elsewhere):
     ! Reaction coefficients & rates 
     ! -----------------------------
@@ -2547,15 +2575,49 @@ CONTAINS
     ! Use GMI O3 P/L 
     CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = "Use_GMI_O3_PL:", &
                                   Default = 0, __RC__ ) 
+    Input_Opt%LSYNOZ = .FALSE.
     IF ( DoIt == 1 ) THEN
+       Input_Opt%LGMIOZ = .TRUE.
        Input_Opt%LLINOZ = .FALSE.
-       Input_Opt%LSYNOZ = .FALSE.
     ELSE
-       Input_Opt%LSYNOZ = .NOT. Input_Opt%LLINOZ
+       Input_Opt%LGMIOZ = .FALSE.
+       !!!Input_Opt%LSYNOZ = .NOT. Input_Opt%LLINOZ
     ENDIF
     IF ( am_I_Root ) THEN
+       WRITE(*,*) '- Use GMIOZ: ', Input_Opt%LGMIOZ 
        WRITE(*,*) '- Use LINOZ: ', Input_Opt%LLINOZ 
        WRITE(*,*) '- Use SYNOZ: ', Input_Opt%LSYNOZ
+    ENDIF
+
+    ! Overwrite strat. O3 with ANA_OZ 
+    ! Default settings
+    LPCHEMO3   = .FALSE.
+    PCHEMO3L1 = 59 
+    PCHEMO3L2 = 59 
+    PCHEMO3FR = 1.0
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = "Use_PCHEM_ozone:", &
+                                  Default = 0, __RC__ ) 
+    IF ( DoIt == 1 ) THEN
+       LPCHEMO3 = .TRUE.
+       CALL ESMF_ConfigGetAttribute( GeosCF, PCHEMO3L1, &
+                                     Label = "PCHEM_ozone_L1:", Default = value_LLSTRAT, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, PCHEMO3L2, &
+                                     Label = "PCHEM_ozone_L2:", Default = value_LLSTRAT, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, PCHEMO3FR, &
+                                     Label = "PCHEM_ozone_FR:", Default = 1.0, __RC__ ) 
+       ASSERT_(PCHEMO3L1 >  0)
+       ASSERT_(PCHEMO3L1 <= LM)
+       ASSERT_(PCHEMO3L2 >= PCHEMO3L1)
+       ASSERT_(PCHEMO3L2 <= LM)
+       PCHEMO3FR = MAX(0.0,MIN(1.0,PCHEMO3FR))
+    ENDIF
+    IF ( am_I_Root ) THEN
+       WRITE(*,*) 'Overwrite with PCHEM ozone? ',LPCHEMO3
+       IF ( LPCHEMO3 ) THEN 
+          WRITE(*,*) 'PCHEM ozone level 1      : ',PCHEMO3L1
+          WRITE(*,*) 'PCHEM ozone level 2      : ',PCHEMO3L2
+          WRITE(*,*) 'PCHEM ozone blend factor : ',PCHEMO3FR
+       ENDIF
     ENDIF
 
     ! Tropopause options 
@@ -3864,6 +3926,14 @@ CONTAINS
              ENDIF
           ENDIF
           Ptr2D => NULL()
+       ENDIF
+
+       !=======================================================================
+       ! Set ozone to values from PCHEM if this option is selected 
+       !=======================================================================
+       IF ( PHASE /= 1 .AND. LPCHEMO3 ) THEN
+          CALL SetAnaO3_( GC, Import, INTSTATE, Export, Clock, &
+                          Input_Opt,  State_Met, State_Chm, Q, __RC__ ) 
        ENDIF
 
        !=======================================================================
@@ -6749,6 +6819,138 @@ CONTAINS
     RETURN_(ESMF_SUCCESS)
 
   END SUBROUTINE InitFromFile_ 
+!EOC
+!------------------------------------------------------------------------------
+!     NASA/GSFC, Global Modeling and Assimilation Office, Code 910.1 and      !
+!          Harvard University Atmospheric Chemistry Modeling Group            !
+!------------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: SetAnaO3_ 
+!
+! !DESCRIPTION: 
+!\\
+!\\
+! !INTERFACE:
+!
+  SUBROUTINE SetAnaO3_( GC, Import, Internal, Export, Clock, &
+                        Input_Opt,  State_Met, State_Chm, Q, RC )
+!
+! !USES:
+!
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+    TYPE(ESMF_GridComp), INTENT(INOUT)         :: GC       ! Ref. to this GridComp
+    TYPE(ESMF_State),    INTENT(INOUT)         :: Import   ! Import State
+    TYPE(ESMF_STATE),    INTENT(INOUT)         :: Internal ! Internal state
+    TYPE(ESMF_State),    INTENT(INOUT)         :: Export   ! Export State
+    TYPE(ESMF_Clock),    INTENT(INOUT)         :: Clock    ! ESMF Clock object
+    TYPE(OptInput)                             :: Input_Opt 
+    TYPE(MetState)                             :: State_Met 
+    TYPE(ChmState)                             :: State_Chm 
+    TYPE(ESMF_Time)                            :: currTime
+    REAL,                INTENT(IN)            :: Q(:,:,:)
+!
+! !OUTPUT PARAMETERS:
+!
+    INTEGER,             INTENT(OUT)           :: RC       ! Success or failure?
+!
+! !REMARKS:
+!
+! !REVISION HISTORY:
+!  18 Mar 2017 - C. Keller   - Initial version
+!EOP
+!------------------------------------------------------------------------------
+!BOC
+!
+! LOCAL VARIABLES:
+!
+    ! Objects
+ 
+    ! Scalars
+    LOGICAL                    :: am_I_Root     ! Are we on the root PET?
+    REAL, POINTER              :: ANAO3(:,:,:)
+    REAL, POINTER              :: O3INC(:,:,:)
+    CHARACTER(LEN=ESMF_MAXSTR) :: Iam, compName ! Gridded component name
+    CHARACTER(LEN=ESMF_MAXSTR) :: SpcName
+    INTEGER                    :: I, J, L, N, LR, IM, JM, LM 
+    INTEGER                    :: STATUS
+    REAL                       :: O3new, MW, ifrac
+    INTEGER                    :: idx
+ 
+    !=======================================================================
+    ! Initialization
+    !=======================================================================
+
+    ! Are we on the root PET
+    am_I_Root = MAPL_Am_I_Root()
+
+    ! Set up traceback info
+    CALL ESMF_GridCompGet( GC, name=compName, __RC__ )
+
+    ! Identify this routine to MAPL
+    Iam = TRIM(compName)//'::SetAnaO3_'
+
+    ! Get analysis O3 field from import
+    CALL MAPL_GetPointer ( IMPORT, ANAO3, 'PCHEM_O3', __RC__ )
+
+    ! Also get diagnostics
+    CALL MAPL_GetPointer ( Export, O3INC, 'PCHEM_O3_INC', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(O3INC) ) O3INC = 0.0
+
+    ! Select ozone index
+    ! Loop over all species
+    N = -1
+    DO I = 1, State_Chm%nSpecies
+       IF ( TRIM(State_Chm%SpcData(I)%Info%Name) == 'O3' ) THEN
+          N = I 
+       ENDIF
+    ENDDO
+    ASSERT_(N > 0)
+
+    ! Molecular weight. Note: -1.0 for non-advected species
+!    MW = State_Chm%SpcData(I)%Info%emMW_g
+!    IF ( MW < 0.0 ) MW = 48.0 
+
+    ! # of vertical levels of Q
+    IM = SIZE(ANAO3,1)
+    JM = SIZE(ANAO3,2)
+    LM = SIZE(ANAO3,3)
+
+    ! Loop over all relevant levels
+    DO L = PCHEMO3L1, LM
+
+       ! LR is the reverse of L
+       LR = LM - L + 1
+
+       ! Get fraction of analysis field to be used. 
+       ! This goes gradually from 0.0 to PCHEMO3FR between PCHEMO3L1 to PCHEMO3L2, 
+       ! and is PCHEMO3FR above
+       IF ( ( L >= PCHEMO3L2 ) .OR. ( PCHEMO3L1 == PCHEMO3L2 ) ) THEN
+          ifrac = PCHEMO3FR 
+       ELSE
+          ifrac = 0.0 + ( PCHEMO3FR * ( L - PCHEMO3L1 ) ) / ( PCHEMO3L2 - PCHEMO3L1 ) 
+       ENDIF
+       ifrac = max(0.0,min(1.0,ifrac))
+
+       ! Pass to State_Chm species array. PCHEM ozone should never be zero or smaller!
+       DO J = 1,JM
+       DO I = 1,IM
+          IF ( ANAO3(I,J,LR) > 0.0 ) THEN
+             O3new = ( (1.0-ifrac) * State_Chm%Species(I,J,L,I) ) &
+                   + (      ifrac  * ANAO3(I,J,LR)              )
+             IF ( ASSOCIATED(O3INC) ) O3INC(I,J,LR) = O3new - State_Chm%Species(I,J,L,N) 
+             State_Chm%Species(I,J,L,N) = O3new 
+          ENDIF
+       ENDDO
+       ENDDO
+    ENDDO
+
+    ! All done
+    RETURN_(ESMF_SUCCESS)
+
+  END SUBROUTINE SetAnaO3_ 
 !EOC
 ! GEOS-5 routine moved to gigc_providerservices_mod but needs updating so
 ! use this for now:

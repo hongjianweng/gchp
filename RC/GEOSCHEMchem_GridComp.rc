@@ -108,11 +108,6 @@ ARCHIVED_CONV:        0
 Convective_precip_correction: 1.0
 
 #
-# %%% Use GMI P/L for O3 (default=no)? %%% 
-#
-Use_GMI_O3_PL:        0
-
-#
 # %%% Cap polar tropopause at 200hPa (default=yes)? %%% 
 #
 Cap_polar_tropopause: 0
@@ -134,3 +129,17 @@ Prescribe_strat_H2O: 1
 #
 INIT_SPC_FROM_FILE: 0
 INIT_SPC_FILE: /discover/nobackup/cakelle2/GEOS_CF/v11-02e/GC_v1102e/21_v11-02e_UCX_PL/GEOSChem_restart.201308010000.edit.nc 
+
+USE_GMI_MESO: 0
+GMI_TEMPLATE: /discover/nobackup/cakelle2/data/GMI/gmi.clim.%spc.geos5.2x25.esmf.nc
+
+#
+# %%% Use GMI P/L for O3 (default=no)? %%%
+#
+Use_GMI_O3_PL:        0
+
+# To use PCHEM O3 in the stratosphere
+Use_PCHEM_ozone: 1
+PCHEM_ozone_L1: 59
+PCHEM_ozone_L2: 60
+PCHEM_ozone_FR: 1.0

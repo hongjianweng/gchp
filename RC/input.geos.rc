@@ -260,7 +260,7 @@ Turn on Wet Deposition? : T
 %%% CHEMISTRY MENU %%%  :
 Turn on Chemistry?      : T
 Use linear. strat. chem?: T
- => Use Linoz for O3?   : T
+ => Use Linoz for O3?   : F
 Use UCX strat. chem?    : T
 Active strat. H2O?      : T
 Overhead O3 for FAST-JX :---
