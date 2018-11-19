@@ -1286,7 +1286,7 @@ BEGIN SECTION SCALE FACTORS
 312 QFED_FT_FRAC  0.35 - - - xy 1 1
 
 # --- Annual scale factors derived from OMI NO2 ---
-341 OMINO2_SCALE_2010to2016 /see/ExtData.rc TroposphericNO2 2016/1/1/0 C xy unitless 1
+341 OMINO2_SCALE_2010to2017 /see/ExtData.rc TroposphericNO2 2017/1/1/0 C xy unitless 1
 
 # --- Annual scale factors based on population density
 351 GPW_SCALE_2013to2017 /see/ExtData.rc Population 2017/1/1/0 C xy unitless 1
