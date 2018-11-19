@@ -818,6 +818,7 @@ CONTAINS
 !!!          PRECISION          = ESMF_KIND_R8,                            &
              DIMS               = MAPL_DimsHorzVert,                       &
              FRIENDLYTO         = 'DYNAMICS',                              &
+             RESTART            = MAPL_RestartSkip,                        &
              VLOCATION          = MAPL_VLocationCenter,                    &
                                                   __RC__ )
           if(MAPL_am_I_Root()) write(*,*) 'GCC added to internal: TRC_Bry; Friendly to: DYNAMICS'
@@ -829,6 +830,7 @@ CONTAINS
 !!!          PRECISION          = ESMF_KIND_R8,                            &
              DIMS               = MAPL_DimsHorzVert,                       &
              FRIENDLYTO         = 'DYNAMICS',                              &
+             RESTART            = MAPL_RestartSkip,                        &
              VLOCATION          = MAPL_VLocationCenter,                    &
                                                   __RC__ )
           if(MAPL_am_I_Root()) write(*,*) 'GCC added to internal: TRC_Cly; Friendly to: DYNAMICS'
