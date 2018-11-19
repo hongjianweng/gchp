@@ -59,8 +59,9 @@ MODULE GEOSCHEMchem_GridCompMod
   USE Time_Mod,      ONLY : ITS_A_NEW_DAY, ITS_A_NEW_MONTH
 
 ! GEOS-5 only:
-  USE MAPL_ConstantsMod                   ! Doesn't seem to be used. Needed?
-  USE Chem_Mod                            ! Chemistry Base Class (chem_mie?)
+  USE MAPL_ConstantsMod                              ! Doesn't seem to be used. Needed?
+  USE Chem_Mod                                       ! Chemistry Base Class (chem_mie?)
+  USE Chem_GroupMod                                  ! For family transport
   USE ERROR_Mod,       ONLY : mpiComm
   USE PHYSCONSTANTS
   USE DiagList_Mod,    ONLY : DgnList
@@ -155,10 +156,13 @@ MODULE GEOSCHEMchem_GridCompMod
 !----
 
   ! To set ozone from PCHEM 
+  LOGICAL                          :: LANAO3
   LOGICAL                          :: LPCHEMO3
-  INTEGER                          :: PCHEMO3L1
-  INTEGER                          :: PCHEMO3L2
-  REAL                             :: PCHEMO3FR 
+  INTEGER                          :: ANAO3L1
+  INTEGER                          :: ANAO3L2
+  INTEGER                          :: ANAO3L3
+  INTEGER                          :: ANAO3L4
+  REAL                             :: ANAO3FR 
 
   ! Number of run phases. Can be set in the resource file (default is 2).
   INTEGER                          :: NPHASE
@@ -805,6 +809,30 @@ CONTAINS
        ENDDO
     ENDIF
 
+!-- Add two extra advected species for use in family transport  (Manyin)
+
+          CALL MAPL_AddInternalSpec(GC,                                    &
+             SHORT_NAME         = 'TRC_Bry',                               &
+             LONG_NAME          = 'Bromine group for use in transport',    &
+             UNITS              = 'kg kg-1',                               &
+!!!          PRECISION          = ESMF_KIND_R8,                            &
+             DIMS               = MAPL_DimsHorzVert,                       &
+             FRIENDLYTO         = 'DYNAMICS',                              &
+             VLOCATION          = MAPL_VLocationCenter,                    &
+                                                  __RC__ )
+          if(MAPL_am_I_Root()) write(*,*) 'GCC added to internal: TRC_Bry; Friendly to: DYNAMICS'
+
+          CALL MAPL_AddInternalSpec(GC,                                    &
+             SHORT_NAME         = 'TRC_Cly',                               &
+             LONG_NAME          = 'Chlorine group for use in transport',   &
+             UNITS              = 'kg kg-1',                               &
+!!!          PRECISION          = ESMF_KIND_R8,                            &
+             DIMS               = MAPL_DimsHorzVert,                       &
+             FRIENDLYTO         = 'DYNAMICS',                              &
+             VLOCATION          = MAPL_VLocationCenter,                    &
+                                                  __RC__ )
+          if(MAPL_am_I_Root()) write(*,*) 'GCC added to internal: TRC_Cly; Friendly to: DYNAMICS'
+
 !
 ! !EXTERNAL STATE:
 !
@@ -1338,20 +1366,34 @@ CONTAINS
 
 ! Analysis ozone import
     CALL ESMF_ConfigGetAttribute( myState%myCF, I, &
-             Label = "Use_PCHEM_ozone:", Default = 0, __RC__ ) 
+             Label = "Use_ANA_O3:", Default = 0, __RC__ ) 
     IF ( I == 1 ) THEN
-       call MAPL_AddImportSpec(GC,                   &
-          SHORT_NAME         = 'PCHEM_O3',           &
-          LONG_NAME          = 'PCHEM_ozone',        &
-          UNITS              = 'kg/kg',              &
-          DIMS               = MAPL_DimsHorzVert,    &
-          VLOCATION          = MAPL_VLocationCenter, &
-          RESTART            = MAPL_RestartSkip,     &
-                                               __RC__ )
+       CALL ESMF_ConfigGetAttribute( myState%myCF, J, &
+                Label = "Use_PCHEM_O3:", Default = 0, __RC__ ) 
+       IF ( J == 1 ) THEN
+          call MAPL_AddImportSpec(GC,                   &
+             SHORT_NAME         = 'PCHEM_O3',           &
+             LONG_NAME          = 'PCHEM_ozone',        &
+             UNITS              = 'kg/kg',              &
+             DIMS               = MAPL_DimsHorzVert,    &
+             VLOCATION          = MAPL_VLocationCenter, &
+             RESTART            = MAPL_RestartSkip,     &
+                                                  __RC__ )
+       ELSE
+          call MAPL_AddImportSpec(GC,                   &
+             SHORT_NAME         = 'ANA_O3',             &
+             LONG_NAME          = 'Analysis_ozone',     &
+             UNITS              = 'kg/kg',              &
+             DIMS               = MAPL_DimsHorzVert,    &
+             VLOCATION          = MAPL_VLocationCenter, &
+             RESTART            = MAPL_RestartSkip,     &
+                                                  __RC__ )
+       ENDIF
     ENDIF
+
     ! Diagnostics for applied ozone increment
     call MAPL_AddExportSpec(GC,                        &
-       SHORT_NAME         = 'PCHEM_O3_INC',            &
+       SHORT_NAME         = 'ANA_O3_INC',            &
        LONG_NAME          = 'Applied_ozone_increment', &
        UNITS              = 'kg/kg',                   &
        DIMS               = MAPL_DimsHorzVert,         &
@@ -2591,32 +2633,47 @@ CONTAINS
 
     ! Overwrite strat. O3 with ANA_OZ 
     ! Default settings
-    LPCHEMO3   = .FALSE.
-    PCHEMO3L1 = 59 
-    PCHEMO3L2 = 59 
-    PCHEMO3FR = 1.0
-    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = "Use_PCHEM_ozone:", &
+    LANAO3  = .FALSE.
+    ANAO3L1 = value_LLSTRAT 
+    ANAO3L2 = value_LLSTRAT
+    ANAO3L3 = LM
+    ANAO3L4 = LM
+    ANAO3FR = 1.0
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = "Use_ANA_O3:", &
                                   Default = 0, __RC__ ) 
     IF ( DoIt == 1 ) THEN
-       LPCHEMO3 = .TRUE.
-       CALL ESMF_ConfigGetAttribute( GeosCF, PCHEMO3L1, &
-                                     Label = "PCHEM_ozone_L1:", Default = value_LLSTRAT, __RC__ ) 
-       CALL ESMF_ConfigGetAttribute( GeosCF, PCHEMO3L2, &
-                                     Label = "PCHEM_ozone_L2:", Default = value_LLSTRAT, __RC__ ) 
-       CALL ESMF_ConfigGetAttribute( GeosCF, PCHEMO3FR, &
-                                     Label = "PCHEM_ozone_FR:", Default = 1.0, __RC__ ) 
-       ASSERT_(PCHEMO3L1 >  0)
-       ASSERT_(PCHEMO3L1 <= LM)
-       ASSERT_(PCHEMO3L2 >= PCHEMO3L1)
-       ASSERT_(PCHEMO3L2 <= LM)
-       PCHEMO3FR = MAX(0.0,MIN(1.0,PCHEMO3FR))
+       LANAO3 = .TRUE.
+       CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L1, &
+                                     Label = "ANA_O3_L1:", Default = value_LLSTRAT, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L2, &
+                                     Label = "ANA_O3_L2:", Default = value_LLSTRAT, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L3, &
+                                     Label = "ANA_O3_L3:", Default = LM, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L4, &
+                                     Label = "ANA_O3_L4:", Default = LM, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3FR, &
+                                     Label = "ANA_O3_FR:", Default = 1.0, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, I, Label = "Use_PCHEM_O3:", &
+                                     Default = 0, __RC__ )
+       LPCHEMO3 = ( I == 1 )
+       ASSERT_(ANAO3L1 >  0)
+       ASSERT_(ANAO3L1 <= LM)
+       ASSERT_(ANAO3L2 >= ANAO3L1)
+       ASSERT_(ANAO3L2 <= LM)
+       ASSERT_(ANAO3L4 >= ANAO3L3)
+       ASSERT_(ANAO3L4 <= LM)
+       ASSERT_(ANAO3L3 >  ANAO3L2)
+       ANAO3FR = MAX(0.0,MIN(1.0,ANAO3FR))
     ENDIF
     IF ( am_I_Root ) THEN
-       WRITE(*,*) 'Overwrite with PCHEM ozone? ',LPCHEMO3
-       IF ( LPCHEMO3 ) THEN 
-          WRITE(*,*) 'PCHEM ozone level 1      : ',PCHEMO3L1
-          WRITE(*,*) 'PCHEM ozone level 2      : ',PCHEMO3L2
-          WRITE(*,*) 'PCHEM ozone blend factor : ',PCHEMO3FR
+       WRITE(*,*) 'Overwrite with analysis ozone?  ',LANAO3
+       IF ( LANAO3 ) THEN 
+          WRITE(*,*) '-> Use internal PCHEM field?     : ',LPCHEMO3
+          WRITE(*,*) '-> Analysis ozone bottom level 1 : ',ANAO3L1
+          WRITE(*,*) '-> Analysis ozone bottom level 2 : ',ANAO3L2
+          WRITE(*,*) '-> Analysis ozone top level 3    : ',ANAO3L3
+          WRITE(*,*) '-> Analysis ozone top level 4    : ',ANAO3L4
+          WRITE(*,*) '-> Analysis ozone blend factor   : ',ANAO3FR
        ENDIF
     ENDIF
 
@@ -2684,6 +2741,9 @@ CONTAINS
        WRITE(*,*) '- Compute VUD online: ', Input_Opt%UseOnlineVUD
     ENDIF
 
+    ! Turn on Family Transport
+    CALL Init_GCC_Chem_Groups()
+
     !=======================================================================
     ! CH4 error checks 
     !=======================================================================
@@ -2694,6 +2754,8 @@ CONTAINS
           WRITE(*,*) 'Please disable CH4 boundary conditions in input.geos.rc'
           WRITE(*,*) 'CH4 boundary conditions will automatically be applied'
           WRITE(*,*) 'if the CH4 emissions flag in input.geos.rc is turned off.'
+          WRITE(*,*) '=> Turn on surface BCs :---'
+          WRITE(*,*) '   => CH4?             : F'
        ENDIF
        ASSERT_(.FALSE.)
     ENDIF
@@ -3931,7 +3993,7 @@ CONTAINS
        !=======================================================================
        ! Set ozone to values from PCHEM if this option is selected 
        !=======================================================================
-       IF ( PHASE /= 1 .AND. LPCHEMO3 ) THEN
+       IF ( PHASE /= 1 .AND. LANAO3 ) THEN
           CALL SetAnaO3_( GC, Import, INTSTATE, Export, Clock, &
                           Input_Opt,  State_Met, State_Chm, Q, __RC__ ) 
        ENDIF
@@ -6892,11 +6954,15 @@ CONTAINS
     ! Identify this routine to MAPL
     Iam = TRIM(compName)//'::SetAnaO3_'
 
-    ! Get analysis O3 field from import
-    CALL MAPL_GetPointer ( IMPORT, ANAO3, 'PCHEM_O3', __RC__ )
+    ! Get analysis O3 field from import in kg/kg
+    IF ( LPCHEMO3 ) THEN
+       CALL MAPL_GetPointer ( IMPORT, ANAO3, 'PCHEM_O3', __RC__ )
+    ELSE
+       CALL MAPL_GetPointer ( IMPORT, ANAO3, 'ANA_O3', __RC__ )
+    ENDIF
 
     ! Also get diagnostics
-    CALL MAPL_GetPointer ( Export, O3INC, 'PCHEM_O3_INC', NotFoundOk=.TRUE., __RC__ )
+    CALL MAPL_GetPointer ( Export, O3INC, 'ANA_O3_INC', NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(O3INC) ) O3INC = 0.0
 
     ! Select ozone index
@@ -6919,18 +6985,22 @@ CONTAINS
     LM = SIZE(ANAO3,3)
 
     ! Loop over all relevant levels
-    DO L = PCHEMO3L1, LM
+    DO L = ANAO3L1, ANAO3L4
 
        ! LR is the reverse of L
        LR = LM - L + 1
 
        ! Get fraction of analysis field to be used. 
-       ! This goes gradually from 0.0 to PCHEMO3FR between PCHEMO3L1 to PCHEMO3L2, 
-       ! and is PCHEMO3FR above
-       IF ( ( L >= PCHEMO3L2 ) .OR. ( PCHEMO3L1 == PCHEMO3L2 ) ) THEN
-          ifrac = PCHEMO3FR 
-       ELSE
-          ifrac = 0.0 + ( PCHEMO3FR * ( L - PCHEMO3L1 ) ) / ( PCHEMO3L2 - PCHEMO3L1 ) 
+       ! This goes gradually from 0.0 to ANAO3FR between ANAO3L1 to ANAO3L2, 
+       ! and is ANAO3FR above
+       !IF ( ( L >= ANAO3L2 ) .OR. ( ANAO3L1 == ANAO3L2 ) ) THEN
+       ifrac = 0.0
+       IF ( L >= ANAO3L2 .AND. L <=  ANAO3L3 ) THEN
+          ifrac = ANAO3FR 
+       ELSEIF ( L < ANAO3L2 ) THEN
+          ifrac = ANAO3FR * ( (L-ANAO3L1) / (ANAO3L2-ANAO3L1) )
+       ELSEIF ( L > ANAO3L3 ) THEN
+          ifrac = ANAO3FR * ( (ANAO3L4-L) / (ANAO3L4-ANAO3L3) )
        ENDIF
        ifrac = max(0.0,min(1.0,ifrac))
 
@@ -6938,7 +7008,7 @@ CONTAINS
        DO J = 1,JM
        DO I = 1,IM
           IF ( ANAO3(I,J,LR) > 0.0 ) THEN
-             O3new = ( (1.0-ifrac) * State_Chm%Species(I,J,L,I) ) &
+             O3new = ( (1.0-ifrac) * State_Chm%Species(I,J,L,N) ) &
                    + (      ifrac  * ANAO3(I,J,LR)              )
              IF ( ASSOCIATED(O3INC) ) O3INC(I,J,LR) = O3new - State_Chm%Species(I,J,L,N) 
              State_Chm%Species(I,J,L,N) = O3new 

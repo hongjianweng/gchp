@@ -139,7 +139,7 @@ GMI_TEMPLATE: /discover/nobackup/cakelle2/data/GMI/gmi.clim.%spc.geos5.2x25.esmf
 Use_GMI_O3_PL:        0
 
 # To use PCHEM O3 in the stratosphere
-Use_PCHEM_ozone: 1
-PCHEM_ozone_L1: 59
+Use_PCHEM_ozone: 0
+PCHEM_ozone_L1: 58
 PCHEM_ozone_L2: 60
 PCHEM_ozone_FR: 1.0
