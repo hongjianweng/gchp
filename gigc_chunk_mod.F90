@@ -965,8 +965,8 @@ CONTAINS
     ! EMISSIONS phase 1. Should be called every time to make sure that the
     ! HEMCO clock and the HEMCO data list are up to date.
     !=======================================================================
-    CALL EMISSIONS_RUN( am_I_Root, Input_Opt,  State_Met, &
-                        State_Chm, DoEmis,     1, RC       )
+    CALL EMISSIONS_RUN( am_I_Root, Input_Opt,  State_Met,     &
+                        State_Chm, State_Diag, DoEmis, 1, RC )
 ! GEOS-5 only (should add to GCHP):
     ASSERT_(RC==GC_SUCCESS)
 !---
@@ -1033,8 +1033,8 @@ CONTAINS
 
 ! GEOS-5 only:
        ! Call HEMCO run interface - Phase 2 
-       CALL EMISSIONS_RUN ( am_I_Root, Input_Opt, State_Met, &
-                            State_Chm, IsChemTime, 2, RC )
+       CALL EMISSIONS_RUN ( am_I_Root, Input_Opt,  State_Met, &
+                            State_Chm, State_Diag, IsChemTime, 2, RC )
 ! GCHP passes Phase instead:
 !       CALL EMISSIONS_RUN ( am_I_Root, Input_Opt, State_Met, State_Chm, &
 !                            DoEmis, Phase, RC )
