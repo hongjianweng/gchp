@@ -287,10 +287,8 @@
 #================================================================================================
 #STATE_PSC        | 1          | xyz | C |    |   |   |     |0.0   |    |    | S       | polar_stratospheric_clouds
  STATE_PSC        | 1          | xyz | C |    |   |   |     |      |    |    | S       | polar_stratospheric_clouds
-#ARCHV_DRY_TOTN   | cm-2s-1    | xy  |   |    |   |   |     |0.0   |    |    | S       | dry_deposited_nitrogen
- ARCHV_DRY_TOTN   | cm-2s-1    | xy  |   |    |   |   |     |      |    |    | S       | dry_deposited_nitrogen
-#ARCHV_WET_TOTN   | cm-2s-1    | xy  |   |    |   |   |     |0.0   |    |    | S       | wet_deposited_nitrogen
- ARCHV_WET_TOTN   | cm-2s-1    | xy  |   |    |   |   |     |      |    |    | S       | wet_deposited_nitrogen
+ DryDepNitrogen   | cm-2s-1    | xy  |   |    |   |   |     |      |    |    | S       | dry_deposited_nitrogen
+ WetDepNitrogen   | cm-2s-1    | xy  |   |    |   |   |     |      |    |    | S       | wet_deposited_nitrogen
 #PFACTOR          | 1          | xy  |   |    |   |   |     |1.0   |    |    | S       | soilnox_pfactor_restart
  PFACTOR          | 1          | xy  |   |    |   |   |     |      |    |    | S       | soilnox_pfactor_restart 
 #DRYPERIOD        | 1          | xy  |   |    |   |   |     |0.0   |    |    | S       | soilnox_dryperiod_restart
@@ -312,9 +310,9 @@
 #================
 # GEOS-5 only:
 #================
- ARCHV_H2O2s      |   vv-1     | xyz | C |    |   |   |     |      |    |    | S       | soluble_fraction_H2O2
- ARCHV_SO2s       |   vv-1     | xyz | C |    |   |   |     |      |    |    | S       | soluble_fraction_SO2
- HSAVE_FOR_KPP    |   1        | xyz | C |    |   |   |     |      |    |    | S       | HSAVE_for_KPP 
+ H2O2AfterChem    |   vv-1     | xyz | C |    |   |   |     |      |    |    | S       | soluble_fraction_H2O2
+ SO2AfterChem     |   vv-1     | xyz | C |    |   |   |     |      |    |    | S       | soluble_fraction_SO2
+ KPPHvalue        |   1        | xyz | C |    |   |   |     |      |    |    | S       | HSAVE_for_KPP 
  SESQ_CARBDENS    | kgCm-3     | xyz | C |    |   |   |     |      |    |    | S       | sesquiterpene_conc_restart
 # ----------------|------------|-----|---|----|---|---|-----|------|----|----|---------|---------------------------------
 </InternalSpec>

@@ -2809,11 +2809,8 @@ CONTAINS
 ! GEOS-5 only (how much of this is for code that can be abstracted
 ! to a different module, either provider services or a geos diag module?):
     USE CMN_SIZE_MOD,            ONLY : LLCHEM
-    USE FLEXCHEM_MOD,            ONLY : HSAVE_KPP
 
     ! To store archived variables in internal state (ckeller, 9/16/15)
-    USE WETSCAV_MOD,             ONLY : H2O2s, SO2s
-    USE GET_NDEP_MOD,            ONLY : DRY_TOTN, WET_TOTN
     USE CARBON_MOD,              ONLY : ORVC_SESQ
 
     ! To archive selected reaction rates
