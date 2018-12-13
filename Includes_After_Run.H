@@ -58,14 +58,14 @@
   ! Various other archived variables needed in internal state. 
   !=========================================================================
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'H2O2AfterChem', notFoundOK=.TRUE., __RC__ ) 
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(State_Chm%H2O2AfterChem) ) THEN
-     Ptr3D = State_Chm%H2O2AfterChem
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%H2O2AfterChem) ) THEN
+     Ptr3D(:,:,LM:1:-1) = State_Chm%H2O2AfterChem(:,:,LM:1:-1)
   ENDIF
   Ptr3D => NULL()
 
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'SO2AfterChem', notFoundOK=.TRUE., __RC__ ) 
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(State_Chm%SO2AfterChem) ) THEN
-     Ptr3D = State_Chm%SO2AfterChem
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%SO2AfterChem) ) THEN
+     Ptr3D(:,:,LM:1:-1) = State_Chm%SO2AfterChem
   ENDIF
   Ptr3D => NULL()
 
@@ -82,7 +82,7 @@
   Ptr2D => NULL()
 
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'KPPHvalue' , notFoundOK=.TRUE., __RC__ ) 
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(State_Chm%KPPHvalue) ) THEN
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%KPPHvalue) ) THEN
      Ptr3D(:,:,1:LM-LLCHEM) = 0.0
      Ptr3D(:,:,LM:LM-LLCHEM+1:-1) = REAL(State_Chm%KPPHvalue(:,:,1:LLCHEM),KIND=ESMF_KIND_R4)
   ENDIF

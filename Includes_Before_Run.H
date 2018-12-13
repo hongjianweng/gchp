@@ -231,14 +231,14 @@
   ! time. (ckeller, 9/16/15)
   !=========================================================================
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'H2O2AfterChem', notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(State_Chm%H2O2AfterChem) ) THEN
-     State_Chm%H2O2AfterChem = Ptr3D
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%H2O2AfterChem) ) THEN
+     State_Chm%H2O2AfterChem = Ptr3D(:,:,LM:1:-1)
   ENDIF
   Ptr3D => NULL()
 
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'SO2AfterChem', notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(State_Chm%SO2AfterChem) ) THEN
-     State_Chm%SO2AfterChem = Ptr3D
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%SO2AfterChem) ) THEN
+     State_Chm%SO2AfterChem = Ptr3D(:,:,LM:1:-1)
   ENDIF
   Ptr3D => NULL()
 
@@ -255,7 +255,7 @@
   Ptr2D => NULL()
 
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'KPPHvalue' , notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(State_Chm%KPPHvalue) ) THEN
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%KPPHvalue) ) THEN
      State_Chm%KPPHvalue(:,:,1:LLCHEM) = REAL(Ptr3D(:,:,LM:LM-LLCHEM+1:-1),KIND=ESMF_KIND_R8)
   ENDIF
   Ptr3D => NULL()
