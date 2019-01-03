@@ -32,6 +32,11 @@
 !                              This is only required upon finalization.
 !  08 May 2015 - C. Keller   - Now fill species on every (chemistry) time 
 !                              step. This is critical for checkpointing.
+!  11 Dec 2018 - E. Lundgren - Change names now that stored in State_Chm
+!                              (old -> new)
+!                              ARCHV_H2O2s/SO2s -> H2O2/SO2AfterChem, 
+!                              ARCHV_DRY/WET_TOTN -> DryDep/WetNitrogent, 
+!                              HSAVE_FOR_KPP -> KPPHvalue
 !EOP
 !------------------------------------------------------------------------------
 !BOC
@@ -225,33 +230,33 @@
   ! we may copy those only on the first time step but for now do it every
   ! time. (ckeller, 9/16/15)
   !=========================================================================
-  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'ARCHV_H2O2s', notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(H2O2s) ) THEN
-     H2O2s = Ptr3D
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'H2O2AfterChem', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%H2O2AfterChem) ) THEN
+     State_Chm%H2O2AfterChem = Ptr3D(:,:,LM:1:-1)
   ENDIF
   Ptr3D => NULL()
 
-  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'ARCHV_SO2s', notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(SO2s) ) THEN
-     SO2s = Ptr3D
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'SO2AfterChem', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%SO2AfterChem) ) THEN
+     State_Chm%SO2AfterChem = Ptr3D(:,:,LM:1:-1)
   ENDIF
   Ptr3D => NULL()
 
-  CALL MAPL_GetPointer( INTSTATE, Ptr2D, 'ARCHV_DRY_TOTN', notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr2D) .AND. ASSOCIATED(DRY_TOTN) ) THEN
-     DRY_TOTN = Ptr2D
+  CALL MAPL_GetPointer( INTSTATE, Ptr2D, 'DryDepNitrogen', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr2D) .AND. ASSOCIATED(State_Chm%DryDepNitrogen) ) THEN
+     State_Chm%DryDepNitrogen = Ptr2D
   ENDIF
   Ptr2D => NULL()
 
-  CALL MAPL_GetPointer( INTSTATE, Ptr2D, 'ARCHV_WET_TOTN', notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr2D) .AND. ASSOCIATED(WET_TOTN) ) THEN
-     WET_TOTN = Ptr2D
+  CALL MAPL_GetPointer( INTSTATE, Ptr2D, 'WetDepNitrogen', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr2D) .AND. ASSOCIATED(State_Chm%WetDepNitrogen) ) THEN
+     State_Chm%WetDepNitrogen = Ptr2D
   ENDIF
   Ptr2D => NULL()
 
-  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'HSAVE_FOR_KPP' , notFoundOK=.TRUE., __RC__ )
-  IF ( ASSOCIATED(Ptr3D) .AND. ALLOCATED(HSAVE_KPP) ) THEN
-     HSAVE_KPP(:,:,1:LLCHEM) = REAL(Ptr3D(:,:,LM:LM-LLCHEM+1:-1),KIND=ESMF_KIND_R8)
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'KPPHvalue' , notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%KPPHvalue) ) THEN
+     State_Chm%KPPHvalue(:,:,1:LLCHEM) = REAL(Ptr3D(:,:,LM:LM-LLCHEM+1:-1),KIND=ESMF_KIND_R8)
   ENDIF
   Ptr3D => NULL()
 

@@ -4,10 +4,7 @@ GEOS-CHEM UNIT TEST SIMULATION: geosfp_4x5_benchmark
 Start YYYYMMDD, hhmmss  : 20130701 000000
 End   YYYYMMDD, hhmmss  : 20130801 000000
 Run directory           : ./
-Input restart file      : GEOSChem_restart.YYYYMMDDhhmm.nc
 Root data directory     : /discover/nobackup/cakelle2/data
- => GEOS-FP subdir      : GEOS_FP/YYYY/MM/
- => MERRA2  subdir      : MERRA2/YYYY/MM/
 Global offsets I0, J0   : 0 0
 ------------------------+------------------------------------------------------
 %%% TIMESTEP MENU %%%   :

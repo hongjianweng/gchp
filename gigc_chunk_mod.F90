@@ -32,7 +32,7 @@ MODULE GIGC_Chunk_Mod
 ! !PRIVATE MEMBER FUNCTIONS:
 !
   PRIVATE :: SET_OZONOPAUSE   ! GEOS-5 only
-  PRIVATE :: StateDiag2Export ! GEOS-5 only
+!  PRIVATE :: StateDiag2Export ! GEOS-5 only
 !
 ! !REVISION HISTORY:
 !  22 Jun 2009 - R. Yantosca & P. Le Sager - Chunkized & cleaned up.
@@ -88,13 +88,13 @@ CONTAINS
                               value_I_HI, value_J_HI,      value_IM,        &
                               value_JM,   value_LM,        value_IM_WORLD,  &
                               value_JM_WORLD,              value_LM_WORLD,  &
-                              value_LLSTRAT, &
+                              value_LLSTRAT,                                &
                               nymdB,      nhmsB,           nymdE,           &
                               nhmsE,      tsChem,          tsDyn,           &
                               lonCtr,     latCtr,          myPET,           &
                                                            Input_Opt,       &
                               State_Chm,  State_Diag,      State_Met,       &
-                  Diag_List,  HcoConfig,                   RC )
+                              HcoConfig,  HistoryConfig,   RC )
 ! GCHP instead:
 !  SUBROUTINE GIGC_Chunk_Init( am_I_Root,  value_I_LO,    value_J_LO,     & 
 !                              value_I_HI, value_J_HI,    value_IM,       &
@@ -135,7 +135,7 @@ CONTAINS
     USE Tendencies_Mod,          ONLY : TEND_INIT                ! GEOS-5 only
     USE Time_Mod,                ONLY : Set_Timesteps
     USE UCX_MOD,                 ONLY : INIT_UCX
-    USE UnitConv_Mod,            ONLY : Convert_Spc_Units ! GCHP only
+    USE UnitConv_Mod,            ONLY : Convert_Spc_Units
 
 !
 ! !INPUT PARAMETERS:
@@ -172,11 +172,8 @@ CONTAINS
     TYPE(ChmState),     INTENT(INOUT) :: State_Chm   ! Chemistry State object 
     TYPE(DgnState),     INTENT(INOUT) :: State_Diag  ! Diagnostics State object
     TYPE(MetState),     INTENT(INOUT) :: State_Met   ! Meteorology State object
-    TYPE(DgnList),      INTENT(INOUT) :: Diag_List   ! Diagnostics List ! GEOS-5
     TYPE(ConfigObj),    POINTER       :: HcoConfig   ! HEMCO config obj 
-! GCHP only:
-!    TYPE(HistoryConfigObj), POINTER   :: HistoryConfig ! History config obj 
-!---
+    TYPE(HistoryConfigObj), POINTER   :: HistoryConfig ! History config obj 
 !
 ! !OUTPUT PARAMETERS:
 !
@@ -373,24 +370,8 @@ CONTAINS
                                           Input_Opt%TS_CONV ),           &
                         Diagnos    = Input_Opt%TS_DIAG         )
 
-! GEOS-5 only (why is this done here?):
-     ! Initialize the diagnostic list object which contains the
-     ! unique entires in the history config file. Note that this is
-     ! done in GCHP Set_Services and therefore must be done prior to
-     ! initialization of the state objects. Also note that the diag_list
-     ! obj may be stored in the HistoryConfig object in GCHP and we may
-     ! want to replicate that behavior in GCC in the future. (ewl, 9/26/17)
-     CALL Init_DiagList( am_I_Root, 'HISTORY.rc', Diag_List, RC )
-!---
-
-    ! Initialize derived-type objects for met, chem, and diag
-! GEOS-5:
-     CALL GC_Init_StateObj( am_I_Root, Diag_List,  Input_Opt, &
-                            State_Chm, State_Diag, State_Met, RC )
-! GCHP used HistoryConfig object instead:
-!    CALL GC_Init_StateObj( am_I_Root, HistoryConfig%DiagList, Input_Opt, &
-!                           State_Chm, State_Diag, State_Met, RC )
-!---
+    CALL GC_Init_StateObj( am_I_Root, HistoryConfig%DiagList, Input_Opt, &
+                           State_Chm, State_Diag, State_Met, RC )
     ASSERT_(RC==GC_SUCCESS)
 
 ! GEOS-5 only (I deleted from GCHP. Needed for GEOS-5?):
@@ -401,13 +382,8 @@ CONTAINS
 !---
 
     ! Initialize other GEOS-Chem modules
-! GEOS-5:
-     CALL GC_Init_Extra( am_I_Root, Diag_List,  Input_Opt, &
-                         State_Chm, State_Diag, RC         )
-! GCHP uses HistoryConfig object instead:
-!    CALL GC_Init_Extra( am_I_Root, HistoryConfig%DiagList, Input_Opt,    &
-!                        State_Chm, State_Diag, RC ) 
-!---
+    CALL GC_Init_Extra( am_I_Root, HistoryConfig%DiagList, Input_Opt,    &
+                        State_Chm, State_Diag, RC ) 
     ASSERT_(RC==GC_SUCCESS)
 
 ! GCHP only:
@@ -424,8 +400,11 @@ CONTAINS
 ! to work. GEOS-5 units at this point are kg/kg total, but are later converted
 ! not using those routines. Setting kg/kg dry here is misleading.
     ! Set State_Chm units
+# if defined( MODEL_GEOS )
+    State_Chm%Spc_Units = 'kg/kg total'
+#else
     State_Chm%Spc_Units = 'kg/kg dry'
-!---
+#endif
 
     ! Initialize the GEOS-Chem pressure module (set Ap & Bp)
     CALL Init_Pressure( am_I_Root )
@@ -479,8 +458,8 @@ CONTAINS
     ! Diagnostics and tendencies 
     !-------------------------------------------------------------------------
 
-    ! The GEOS-Chem diagnostics list (Diag_List) is initialized during
-    ! GIGC_INIT_SIMULATION, and corresponding arrays in State_Diag are 
+    ! The GEOS-Chem diagnostics list, stored in HistoryConfig, is initialized 
+    ! during GIGC_INIT_SIMULATION, and corresponding arrays in State_Diag are 
     ! allocated accordingly when initializing State_Diag. Here, we thus 
     ! only need to initialize the tendencies, which have not been initialized
     ! yet (ckeller, 11/29/17). 
@@ -541,13 +520,13 @@ CONTAINS
 !
 ! !INTERFACE:
 !
-! GEOS-5 vs GCHP note: GEOS-5 gets passed Diag_List and FirstRewind
-  SUBROUTINE GIGC_Chunk_Run( am_I_Root, GC, IM,     JM,         LM,         &
-                             nymd,      nhms,       year,       month,      &
-                             day,       dayOfYr,    hour,       minute,     &
-                             second,    utc,        hElapsed,   Input_Opt,  &
-                             State_Chm, State_Met,  State_Diag, Diag_List,  &
-                             Phase,     IsChemTime, FrstRewind, RC )
+! GEOS-5 vs GCHP note: GEOS-5 gets passed FirstRewind
+  SUBROUTINE GIGC_Chunk_Run( am_I_Root,  GC,   IM,   JM,         LM,         &
+                             nymd,       nhms,       year,       month,      &
+                             day,        dayOfYr,    hour,       minute,     &
+                             second,     utc,        hElapsed,   Input_Opt,  &
+                             State_Chm,  State_Met,  State_Diag, Phase,      &
+                             IsChemTime, FrstRewind, RC )
 !
 ! !USES:
 !
@@ -585,12 +564,15 @@ CONTAINS
     USE Pressure_Mod,       ONLY : Accept_External_Pedge
     USE State_Chm_Mod,      ONLY : IND_
     USE Time_Mod,           ONLY : Accept_External_Date_Time
-    Use UnitConv_Mod,       ONLY : Convert_Spc_Units
+#if defined( MODEL_GEOS )
+    USE UnitConv_Mod,       ONLY : Convert_Spc_Units
+#endif
 
     ! Diagnostics
     USE Diagnostics_Mod,    ONLY : Set_Diagnostics_EndofTimestep
 
 ! GEOS-5 only:
+    USE CMN_SIZE_MOD,       ONLY : IIPAR, JJPAR, LLPAR
     USE PRECISION_MOD
     USE DAO_MOD,            ONLY : GET_COSINE_SZA
     USE DiagList_Mod,       ONLY : DgnList 
@@ -626,7 +608,6 @@ CONTAINS
     TYPE(ChmState),      INTENT(INOUT) :: State_Chm   ! Chemistry State obj
     TYPE(MetState),      INTENT(INOUT) :: State_Met   ! Meteorology State obj
     TYPE(DgnState),      INTENT(INOUT) :: State_Diag  ! Diagnostics State obj
-    TYPE(DgnList),       INTENT(INOUT) :: Diag_List   ! Diagnostics List 
 !
 ! !OUTPUT PARAMETERS:
 !
@@ -678,10 +659,10 @@ CONTAINS
     REAL*8                         :: DT
     CHARACTER(LEN=ESMF_MAXSTR)     :: Iam
     INTEGER                        :: STATUS
-
-! GCHP only:
-!    CHARACTER(LEN=ESMF_MAXSTR)     :: OrigUnit
-!---
+#if defined( MODEL_GEOS )
+    CHARACTER(LEN=ESMF_MAXSTR)     :: OrigUnit
+    INTEGER                        :: N, I, J, L
+#endif
 
     ! Local logicals to turn on/off individual components
     ! The parts to be executed are based on the input options,
@@ -700,15 +681,6 @@ CONTAINS
     ! # of times this routine has been called. Only temporary for printing 
     ! processes on the first 10 calls.
     INTEGER, SAVE                  :: NCALLS = 0
-
-! GEOS-5 only:
-    INTEGER                        :: N
-
-    ! To convert molec cm-3 to kg/kg
-    REAL(fp)                       :: MolecRatio, MW_g 
-
-    ! To convert kg/kg total to kg/kg dry
-    REAL(fp), allocatable          :: scal(:,:,:)
 
     ! UV month
     INTEGER, SAVE                  :: UVmonth = -999
@@ -922,40 +894,33 @@ CONTAINS
     ! Call PBL quantities. Those are always needed
     CALL COMPUTE_PBL_HEIGHT( am_I_Root, State_Met, RC )
 
-! GEOS-5 only (spc_units thus should not be set to kg/kg dry earlier. The
-! conversion below could be simplified by implementing dry <-> moist
-! conversion in unitconv_mod.):
+#if defined( MODEL_GEOS )
     !=======================================================================
     ! Species arrive in kg/kg total. Convert to kg/kg dry 
     !=======================================================================
 
-    ! Allocate temporary array for unit conversion
-    ALLOCATE(scal(IM,JM,LM))
-
-    ! Precompute scale factor 
-    scal(:,:,:) = 1.0 - ( State_Met%SPHU * 1.0d-3 )
-
-    DO N=1,State_Chm%nSpecies
-
-       ! Non-advected species have a negative molecular weight. Those are 
-       ! flagged with a negative concentration in GEOS-Chem. 
-       IF ( State_Chm%SpcData(N)%Info%EmMW_g < 0.0 ) THEN
-          State_Chm%Species(:,:,:,N) = State_Chm%Species(:,:,:,N) * -1.0 
-       ENDIF
-
-       ! ckeller, 9/16/17: bug fix: swap pmid & pmid_dry
-       !State_Chm%Species(:,:,:,N) = State_Chm%Species(:,:,:,N) &
-       !                           / State_Met%PMID_DRY(:,:,:) * State_Met%PMID(:,:,:)
-       State_Chm%Species(:,:,:,N) = State_Chm%Species(:,:,:,N) / scal(:,:,:)
-    ENDDO
-
-    ! Update species units
-    State_Chm%Spc_Units = 'kg/kg dry'
-! GCHP converts to kg/kg dry instead:
-!    ! Convert species conc units to kg/kg dry prior to Phase 1/2 calls
-!    CALL Convert_Spc_Units( am_I_Root, Input_Opt, State_Met, State_Chm, &
-!                            'kg/kg dry', RC )
-!---
+    ! Adjust total mixing ratio to account for change in specific
+    ! humidity and dry air mass since end of last timestep. Always skip
+    ! first step and do not apply if transport is turned on. (ewl, 11/8/18)
+    IF ( (.NOT. FIRST) .AND. ( .NOT. Input_Opt%LTRAN ) ) THEN
+       DO N = 1, State_Chm%nSpecies
+       DO L = 1, LLPAR
+       DO J = 1, JJPAR
+       DO I = 1, IIPAR
+         State_Chm%Species(I,J,L,N) = State_Chm%Species(I,J,L,N)          &
+                 / ( 1e0_fp - ( State_Met%SPHU_PREV(I,J,L) * 1e-3_fp ) )  &
+                 * ( 1e0_fp - ( State_Met%SPHU(I,J,L) * 1e-3_fp ) )       &
+                 * State_Met%DP_DRY_PREV(I,J,L) / State_Met%DELP_DRY(I,J,L)    
+       ENDDO
+       ENDDO
+       ENDDO
+       ENDDO
+    ENDIF
+    
+    ! Convert total mixing ratio to dry mixing ratio
+    CALL Convert_Spc_Units ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+                            'kg/kg dry', RC )
+#endif
 
     ! SDE 05/28/13: Set H2O to STT if relevant
 ! GEOS-5 only:
@@ -1000,8 +965,8 @@ CONTAINS
     ! EMISSIONS phase 1. Should be called every time to make sure that the
     ! HEMCO clock and the HEMCO data list are up to date.
     !=======================================================================
-    CALL EMISSIONS_RUN( am_I_Root, Input_Opt,  State_Met, &
-                        State_Chm, DoEmis,     1, RC       )
+    CALL EMISSIONS_RUN( am_I_Root, Input_Opt,  State_Met,     &
+                        State_Chm, State_Diag, DoEmis, 1, RC )
 ! GEOS-5 only (should add to GCHP):
     ASSERT_(RC==GC_SUCCESS)
 !---
@@ -1068,8 +1033,8 @@ CONTAINS
 
 ! GEOS-5 only:
        ! Call HEMCO run interface - Phase 2 
-       CALL EMISSIONS_RUN ( am_I_Root, Input_Opt, State_Met, &
-                            State_Chm, IsChemTime, 2, RC )
+       CALL EMISSIONS_RUN ( am_I_Root, Input_Opt,  State_Met, &
+                            State_Chm, State_Diag, IsChemTime, 2, RC )
 ! GCHP passes Phase instead:
 !       CALL EMISSIONS_RUN ( am_I_Root, Input_Opt, State_Met, State_Chm, &
 !                            DoEmis, Phase, RC )
@@ -1289,48 +1254,27 @@ CONTAINS
     CALL HCOI_GC_WriteDiagn( am_I_Root, Input_Opt, .FALSE., RC )
     ASSERT_(RC==GC_SUCCESS)
 
-    ! Pass arrays from State_Diag to MAPL Export
-    CALL StateDiag2Export ( am_I_Root, Input_Opt, State_Met, State_Chm, &
-                            State_Diag, Diag_List, HcoState%EXPORT, &
-                            DoChem, DoDryDep, Phase, IM, JM, LM, RC )
-    ASSERT_(RC==GC_SUCCESS)
-
     CALL MAPL_TimerOff( STATE, 'GC_DIAGN' )
 !---
 
-! GEOS-5 only (unit conversion):
+
+#if defined( MODEL_GEOS )
     !=======================================================================
     ! Convert species back to kg/kg total
     !=======================================================================
-    ! Recompute conversion factor because GEOS-Chem might have updated SPHU.
-    ! Since SPHU is currently not passed back to GEOS those changes to water
-    ! wapor are being lost but I still think that the species unit conversion
-    ! should be based upon the updated SPHU (ckeller 12/15/2017).
-    scal(:,:,:) = 1.0 - ( State_Met%SPHU * 1.0d-3 )
 
-    ! Convert kg/kg dry to kg/kg moist
-    DO N=1,State_Chm%nSpecies
-       ! ckeller, 9/16/17: bug fix: swap pmid & pmid_dry
-       !State_Chm%Species(:,:,:,N) = State_Chm%Species(:,:,:,N) &
-       !                           / State_Met%PMID(:,:,:) * State_Met%PMID_DRY(:,:,:)
-       State_Chm%Species(:,:,:,N) = State_Chm%Species(:,:,:,N) * scal
+    ! Convert dry mixing ratio to total mixing ratio
+    CALL Convert_Spc_Units ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+                            'kg/kg total', RC )
 
-       ! Non-advected species have a negative molecular weight. Those are 
-       ! flagged with a negative concentration in GEOS-Chem. Store as positive 
-       ! concentrations in the internal state 
-       IF ( State_Chm%SpcData(N)%Info%EmMW_g < 0.0 ) THEN
-          State_Chm%Species(:,:,:,N) = State_Chm%Species(:,:,:,N) * -1.0 
-       ENDIF
-    ENDDO
-!---
+    ! Save specific humidity and dry air mass for total mixing ratio 
+    ! adjustment in next timestep, if needed (ewl, 11/8/18)
+    State_Met%SPHU_PREV = State_Met%SPHU
+#endif
 
     !=======================================================================
     ! Clean up
     !=======================================================================
-
-! GEOS-5 only (for the kg/kg total -> kg/kg dry conversion):
-    IF( ALLOCATED(scal) ) DEALLOCATE(scal)
-!---
 
     ! testing only
     IF ( PHASE /= 1 .AND. NCALLS < 10 ) NCALLS = NCALLS + 1 
@@ -1362,7 +1306,8 @@ CONTAINS
 !\\
 ! !INTERFACE:
 !
-  SUBROUTINE GIGC_Chunk_Final( am_I_Root, Input_Opt, State_Chm, State_Met, State_Diag, Diag_List, RC )
+  SUBROUTINE GIGC_Chunk_Final( am_I_Root, Input_Opt, State_Chm, State_Met, &
+                               State_Diag, RC )
 !
 ! !USES:
 !
@@ -1386,9 +1331,6 @@ CONTAINS
     TYPE(ChmState), INTENT(INOUT) :: State_Chm     ! Chemistry State object
     TYPE(MetState), INTENT(INOUT) :: State_Met     ! Meteorology State object
     TYPE(DgnState), INTENT(INOUT) :: State_Diag    ! Diagnostics State object
-! GEOS-5 only:
-    TYPE(DgnList),  INTENT(INOUT) :: Diag_List     ! Diagnostics list object 
-! ---
 !
 ! !OUTPUT PARAMETERS:
 !
@@ -1465,10 +1407,6 @@ CONTAINS
           write(*,'(a)') 'Chem::State_Diag Finalize... FAILURE.'
        ENDIF
     ENDIF
-
-    ! Deallocate fields of the diagnostics list object
-    CALL Cleanup_DiagList( am_I_Root, Diag_List, RC )
-!---
 
   END SUBROUTINE GIGC_Chunk_Final
 !EOC
