@@ -163,6 +163,7 @@ MODULE GEOSCHEMchem_GridCompMod
   INTEGER                          :: ANAO3L3
   INTEGER                          :: ANAO3L4
   REAL                             :: ANAO3FR 
+  CHARACTER(LEN=ESMF_MAXSTR)       :: ANAO3FILE
 
   ! Number of run phases. Can be set in the resource file (default is 2).
   INTEGER                          :: NPHASE
@@ -1382,14 +1383,14 @@ CONTAINS
              RESTART            = MAPL_RestartSkip,     &
                                                   __RC__ )
        ELSE
-          call MAPL_AddImportSpec(GC,                   &
-             SHORT_NAME         = 'ANA_O3',             &
-             LONG_NAME          = 'Analysis_ozone',     &
-             UNITS              = 'kg/kg',              &
-             DIMS               = MAPL_DimsHorzVert,    &
-             VLOCATION          = MAPL_VLocationCenter, &
-             RESTART            = MAPL_RestartSkip,     &
-                                                  __RC__ )
+!          call MAPL_AddImportSpec(GC,                   &
+!             SHORT_NAME         = 'ANA_O3',             &
+!             LONG_NAME          = 'Analysis_ozone',     &
+!             UNITS              = 'kg/kg',              &
+!             DIMS               = MAPL_DimsHorzVert,    &
+!             VLOCATION          = MAPL_VLocationCenter, &
+!             RESTART            = MAPL_RestartSkip,     &
+!                                                  __RC__ )
        ENDIF
     ENDIF
 
@@ -2646,15 +2647,17 @@ CONTAINS
     IF ( DoIt == 1 ) THEN
        LANAO3 = .TRUE.
        CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L1, &
-                                     Label = "ANA_O3_L1:", Default = value_LLSTRAT, __RC__ ) 
+                                     Label = "ANAO3L1:", Default = value_LLSTRAT, __RC__ ) 
        CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L2, &
-                                     Label = "ANA_O3_L2:", Default = value_LLSTRAT, __RC__ ) 
+                                     Label = "ANAO3L2:", Default = value_LLSTRAT, __RC__ ) 
        CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L3, &
-                                     Label = "ANA_O3_L3:", Default = LM, __RC__ ) 
+                                     Label = "ANAO3L3:", Default = LM, __RC__ ) 
        CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3L4, &
-                                     Label = "ANA_O3_L4:", Default = LM, __RC__ ) 
+                                     Label = "ANAO3L4:", Default = LM, __RC__ ) 
        CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3FR, &
-                                     Label = "ANA_O3_FR:", Default = 1.0, __RC__ ) 
+                                     Label = "ANAO3FR:", Default = 1.0, __RC__ ) 
+       CALL ESMF_ConfigGetAttribute( GeosCF, ANAO3FILE, Label = "ANAO3TMPL:", &
+                                     Default = '/dev/null', __RC__ )
        CALL ESMF_ConfigGetAttribute( GeosCF, I, Label = "Use_PCHEM_O3:", &
                                      Default = 0, __RC__ )
        LPCHEMO3 = ( I == 1 )
@@ -3995,7 +3998,7 @@ CONTAINS
        !=======================================================================
        ! Set ozone to values from PCHEM if this option is selected 
        !=======================================================================
-       IF ( PHASE /= 1 .AND. LANAO3 ) THEN
+       IF ( PHASE /= 2 .AND. LANAO3 ) THEN
           CALL SetAnaO3_( GC, Import, INTSTATE, Export, Clock, &
                           Input_Opt,  State_Met, State_Chm, Q, __RC__ ) 
        ENDIF
@@ -6913,7 +6916,6 @@ CONTAINS
     TYPE(OptInput)                             :: Input_Opt 
     TYPE(MetState)                             :: State_Met 
     TYPE(ChmState)                             :: State_Chm 
-    TYPE(ESMF_Time)                            :: currTime
     REAL,                INTENT(IN)            :: Q(:,:,:)
 !
 ! !OUTPUT PARAMETERS:
@@ -6934,6 +6936,7 @@ CONTAINS
  
     ! Scalars
     LOGICAL                    :: am_I_Root     ! Are we on the root PET?
+    LOGICAL                    :: TimeForAna
     REAL, POINTER              :: ANAO3(:,:,:)
     REAL, POINTER              :: O3INC(:,:,:)
     CHARACTER(LEN=ESMF_MAXSTR) :: Iam, compName ! Gridded component name
@@ -6942,6 +6945,21 @@ CONTAINS
     INTEGER                    :: STATUS
     REAL                       :: O3new, MW, ifrac
     INTEGER                    :: idx
+    CHARACTER(LEN=2)           :: SL1, SL2 
+
+    ! To read from file
+    LOGICAL                    :: HasFile 
+    CHARACTER(LEN=ESMF_MAXSTR) :: ifile
+    CHARACTER(LEN=ESMF_MAXSTR) :: VarName
+    TYPE(MAPL_SimpleBundle)    :: VarBundle
+    TYPE(ESMF_Grid)            :: grid
+    TYPE(ESMF_TIME)            :: currTime 
+    TYPE(ESMF_TIME)            :: fileTime 
+    TYPE(ESMF_Field)           :: iFld
+    INTEGER                    :: VarID, fid 
+    INTEGER                    :: nymd, nhms, yy, mm, dd, h, m, s, incSecs    
+    CHARACTER(LEN=4)           :: syy
+    CHARACTER(LEN=2)           :: smm, sdd, sh, sm
  
     !=======================================================================
     ! Initialization
@@ -6951,78 +6969,201 @@ CONTAINS
     am_I_Root = MAPL_Am_I_Root()
 
     ! Set up traceback info
-    CALL ESMF_GridCompGet( GC, name=compName, __RC__ )
+    CALL ESMF_GridCompGet( GC, name=compName, grid=grid,  __RC__ )
 
     ! Identify this routine to MAPL
     Iam = TRIM(compName)//'::SetAnaO3_'
 
-    ! Get analysis O3 field from import in kg/kg
-    IF ( LPCHEMO3 ) THEN
-       CALL MAPL_GetPointer ( IMPORT, ANAO3, 'PCHEM_O3', __RC__ )
+    ! Is it time to do the analysis? For now, do analysis every three hours
+    ! (middle of 3-hour time step)
+    ! Get current time
+    CALL ESMF_ClockGet( Clock, currTime = currTime, __RC__ )
+    CALL ESMF_TimeGet( currTime, yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, __RC__ )
+    IF ( m==30 .AND. MOD(h,3)==1 ) THEN
+       TimeForAna = .TRUE.
     ELSE
-       CALL MAPL_GetPointer ( IMPORT, ANAO3, 'ANA_O3', __RC__ )
+       TimeForAna = .FALSE.
     ENDIF
 
-    ! Also get diagnostics
+    ! Diagnostics
     CALL MAPL_GetPointer ( Export, O3INC, 'ANA_O3_INC', NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(O3INC) ) O3INC = 0.0
+   
+    ! Get target ozone field 
+    IF ( TimeForAna ) THEN
 
-    ! Select ozone index
-    ! Loop over all species
-    N = -1
-    DO I = 1, State_Chm%nSpecies
-       IF ( TRIM(State_Chm%SpcData(I)%Info%Name) == 'O3' ) THEN
-          N = I 
+       ! Verbose
+       WRITE(SL1,'(I2)') ANAO3L1
+       WRITE(SL2,'(I2)') ANAO3L4
+       IF ( am_I_Root ) WRITE(*,*) 'GEOS-Chem: nudging ozone between level '//SL1//' and '//SL2
+
+       ! Get analysis O3 field from import in kg/kg
+       IF ( LPCHEMO3 ) THEN
+          CALL MAPL_GetPointer ( IMPORT, ANAO3, 'PCHEM_O3', __RC__ )
+   
+       ! If not PCHEM, try to read it from the specified file
+       ELSE
+          !CALL MAPL_GetPointer ( IMPORT, ANAO3, 'ANA_O3', __RC__ )
+          ! Parse file name
+          ifile = ANAO3FILE
+
+          ! testing only
+          IF ( am_I_Root ) WRITE(*,*) 'parsing '//TRIM(ifile)
+
+          write(syy,'(I4.4)') yy
+          CALL ReplaceChar ( ifile, '%y4', syy )
+          write(smm,'(I2.2)') mm
+          CALL ReplaceChar ( ifile, '%m2', smm )
+          write(sdd,'(I2.2)') dd
+          CALL ReplaceChar ( ifile, '%d2', sdd )
+          write(sh,'(I2.2)') h
+          CALL ReplaceChar ( ifile, '%h2', sh  )
+          write(sm,'(I2.2)') m
+          CALL ReplaceChar ( ifile, '%n2', sm  )
+  
+          ! testing only
+          IF ( am_I_Root ) WRITE(*,*) 'parsed file: '//TRIM(ifile)
+
+          ! Check if file exists
+          INQUIRE( FILE=ifile, EXIST=HasFile ) 
+          IF ( HasFile ) THEN
+ 
+             ! Get time stamp on file
+             call GFIO_Open( ifile, 1, fid, STATUS )
+             ASSERT_(STATUS==0)
+             call GetBegDateTime ( fid, nymd, nhms, incSecs, STATUS )
+             ASSERT_(STATUS==0)
+             caLL GFIO_Close( fid, STATUS )
+             ASSERT_(STATUS==0)
+             yy = nymd/10000
+             mm = (nymd-yy*10000) / 100
+             dd = nymd - (10000*yy + mm*100)
+             h  = nhms/10000
+             m  = (nhms- h*10000) / 100
+             s  = nhms - (10000*h  +  m*100)
+             call ESMF_TimeSet(fileTime, yy=yy, mm=mm, dd=dd, h=h, m=m, s=s)
+   
+             ! Read file
+             VarBundle =  MAPL_SimpleBundleRead ( TRIM(ifile), grid, fileTime, __RC__ )
+             VarName   =  'O3'
+             VarID     =  MAPL_SimpleBundleGetIndex ( VarBundle, trim(VarName), 3, RC=STATUS, QUIET=.TRUE. )
+             ANAO3     => VarBundle%r3(VarID)%q
+             IF ( am_I_Root ) WRITE(*,*) 'Use analysis ozone from '//TRIM(ifile)
+          ELSE
+             TimeForAna = .FALSE.
+             IF ( am_I_Root ) WRITE(*,*) 'File not found - skip ozone nudging: '//TRIM(ifile)
+          ENDIF   
        ENDIF
-    ENDDO
-    ASSERT_(N > 0)
+    ENDIF
 
-    ! Molecular weight. Note: -1.0 for non-advected species
-!    MW = State_Chm%SpcData(I)%Info%emMW_g
-!    IF ( MW < 0.0 ) MW = 48.0 
-
-    ! # of vertical levels of Q
-    IM = SIZE(ANAO3,1)
-    JM = SIZE(ANAO3,2)
-    LM = SIZE(ANAO3,3)
-
-    ! Loop over all relevant levels
-    DO L = ANAO3L1, ANAO3L4
-
-       ! LR is the reverse of L
-       LR = LM - L + 1
-
-       ! Get fraction of analysis field to be used. 
-       ! This goes gradually from 0.0 to ANAO3FR between ANAO3L1 to ANAO3L2, 
-       ! and is ANAO3FR above
-       !IF ( ( L >= ANAO3L2 ) .OR. ( ANAO3L1 == ANAO3L2 ) ) THEN
-       ifrac = 0.0
-       IF ( L >= ANAO3L2 .AND. L <=  ANAO3L3 ) THEN
-          ifrac = ANAO3FR 
-       ELSEIF ( L < ANAO3L2 ) THEN
-          ifrac = ANAO3FR * ( (L-ANAO3L1) / (ANAO3L2-ANAO3L1) )
-       ELSEIF ( L > ANAO3L3 ) THEN
-          ifrac = ANAO3FR * ( (ANAO3L4-L) / (ANAO3L4-ANAO3L3) )
-       ENDIF
-       ifrac = max(0.0,min(1.0,ifrac))
-
-       ! Pass to State_Chm species array. PCHEM ozone should never be zero or smaller!
-       DO J = 1,JM
-       DO I = 1,IM
-          IF ( ANAO3(I,J,LR) > 0.0 ) THEN
-             O3new = ( (1.0-ifrac) * State_Chm%Species(I,J,L,N) ) &
-                   + (      ifrac  * ANAO3(I,J,LR)              )
-             IF ( ASSOCIATED(O3INC) ) O3INC(I,J,LR) = O3new - State_Chm%Species(I,J,L,N) 
-             State_Chm%Species(I,J,L,N) = O3new 
+    ! Apply ozone analysis increment if it's time to do so
+    IF ( TimeForAna ) THEN  
+ 
+       ! Select ozone index
+       ! Loop over all species
+       N = -1
+       DO I = 1, State_Chm%nSpecies
+          IF ( TRIM(State_Chm%SpcData(I)%Info%Name) == 'O3' ) THEN
+             N = I 
           ENDIF
        ENDDO
+       ASSERT_(N > 0)
+
+       ! Molecular weight. Note: -1.0 for non-advected species
+   !    MW = State_Chm%SpcData(I)%Info%emMW_g
+   !    IF ( MW < 0.0 ) MW = 48.0 
+   
+       ! # of vertical levels of Q
+       IM = SIZE(ANAO3,1)
+       JM = SIZE(ANAO3,2)
+       LM = SIZE(ANAO3,3)
+   
+       ! Loop over all relevant levels
+       DO L = ANAO3L1, ANAO3L4
+   
+          ! LR is the reverse of L
+          LR = LM - L + 1
+   
+          ! Get fraction of analysis field to be used. 
+          ! This goes gradually from 0.0 to ANAO3FR between ANAO3L1 to ANAO3L2, 
+          ! and is ANAO3FR above
+          !IF ( ( L >= ANAO3L2 ) .OR. ( ANAO3L1 == ANAO3L2 ) ) THEN
+          ifrac = 0.0
+          IF ( L >= ANAO3L2 .AND. L <=  ANAO3L3 ) THEN
+             ifrac = ANAO3FR 
+          ELSEIF ( L < ANAO3L2 ) THEN
+             ifrac = ANAO3FR * ( (L-ANAO3L1) / (ANAO3L2-ANAO3L1) )
+          ELSEIF ( L > ANAO3L3 ) THEN
+             ifrac = ANAO3FR * ( (ANAO3L4-L) / (ANAO3L4-ANAO3L3) )
+          ENDIF
+          ifrac = max(0.0,min(1.0,ifrac))
+   
+          ! Pass to State_Chm species array. PCHEM ozone should never be zero or smaller!
+          DO J = 1,JM
+          DO I = 1,IM
+             IF ( ANAO3(I,J,LR) > 0.0 ) THEN
+                O3new = ( (1.0-ifrac) * State_Chm%Species(I,J,L,N) ) &
+                      + (      ifrac  * ANAO3(I,J,LR)              )
+                IF ( ASSOCIATED(O3INC) ) O3INC(I,J,LR) = O3new - State_Chm%Species(I,J,L,N) 
+                State_Chm%Species(I,J,L,N) = O3new 
+             ENDIF
+          ENDDO
+          ENDDO
        ENDDO
-    ENDDO
+   
+       ! Clean up
+       IF ( ASSOCIATED(ANAO3 ) ) ANAO3 => NULL()
+       IF ( .NOT. LPCHEMO3 ) CALL MAPL_SimpleBundleDestroy ( VarBundle, __RC__ )
+    ENDIF
 
     ! All done
     RETURN_(ESMF_SUCCESS)
 
   END SUBROUTINE SetAnaO3_ 
+!EOC
+!------------------------------------------------------------------------------
+!     NASA/GSFC, Global Modeling and Assimilation Office, Code 910.1 and      !
+!          Harvard University Atmospheric Chemistry Modeling Group            !
+!------------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: ReplaceChar 
+!
+! !DESCRIPTION: Replaces all characters in a string 
+!\\
+!\\
+! !INTERFACE:
+!
+  SUBROUTINE ReplaceChar ( str, pattern, replace )
+!
+! !INPUT PARAMETERS:
+!
+    CHARACTER(LEN=*), INTENT(IN)    :: pattern 
+    CHARACTER(LEN=*), INTENT(IN)    :: replace
+!                                                             
+! !INPUT/OUTPUT PARAMETERS:                                         
+!              
+    CHARACTER(LEN=*), INTENT(INOUT) :: str 
+!
+! !REVISION HISTORY:
+!  20 Dec 2018 - C. Keller   - Initial version
+!EOP
+!------------------------------------------------------------------------------
+!BOC
+!
+! LOCAL VARIABLES:
+!
+    INTEGER  :: I, LP, LS
+
+    LP = LEN(TRIM(pattern))
+    LS = LEN(TRIM(str))+1
+    I  = INDEX(TRIM(str),TRIM(pattern))
+    DO WHILE ( I > 0 ) 
+       str = TRIM(str(1:I-1))//TRIM(replace)//TRIM(str(I+LP:LS))
+       I = INDEX(TRIM(str),TRIM(pattern))
+    ENDDO
+
+  END SUBROUTINE ReplaceChar
 !EOC
 ! GEOS-5 routine moved to gigc_providerservices_mod but needs updating so
 ! use this for now:
