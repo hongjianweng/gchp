@@ -107,7 +107,8 @@ MODULE GIGC_HistoryExports_Mod
 !
   ! Prefix of the species names in the internal state and HISTORY.rc
 #if defined( MODEL_GEOS )
-  CHARACTER(LEN=4), PUBLIC, PARAMETER  :: SPFX = 'TRC_'
+  CHARACTER(LEN=4), PUBLIC, PARAMETER  :: TPFX = 'TRC_'
+  CHARACTER(LEN=4), PUBLIC, PARAMETER  :: SPFX = 'SPC_'
 #else
   CHARACTER(LEN=4), PUBLIC, PARAMETER  :: SPFX = 'SPC_'
 #endif
@@ -237,10 +238,12 @@ CONTAINS
     current => HistoryConfig%DiagList%head
     DO WHILE ( ASSOCIATED( current ) )
 
-       ! Skip State_Chm%Species entries since in internal state
-       ! TODO: In GCHP this would appear with prefix stored in SPFX
-       !       Need to make GCC and GCHP more consistent in future
-       IF ( INDEX( current%name,  TRIM(SPFX) ) > 0 ) THEN
+       ! Skip species entries in internal state, denoted by prefix 
+       ! 'SPC_' in GCHP and either 'SPC_' or 'TRC_' in GEOS-5.
+       ! TODO: Other internal state variables are currently not skipped.
+       !       They should be added here to avoid errors during output.
+       IF ( ( INDEX( current%name,  TRIM(TPFX) ) > 0 ) .OR.   &
+            ( INDEX( current%name,  TRIM(SPFX) ) > 0 ) ) THEN
           current => current%next
           CYCLE
        ENDIF

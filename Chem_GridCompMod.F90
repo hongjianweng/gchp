@@ -2299,7 +2299,7 @@ CONTAINS
        fieldName = TRIM(SPFX)//TRIM(Int2Spc(I)%Name)
        CALL ESMF_StateGet( INTSTATE, TRIM(fieldName), GcFld, RC=STATUS )
        IF ( STATUS /= ESMF_SUCCESS ) THEN
-          fieldName = 'TRC_'//TRIM(Int2Spc(I)%Name)
+          fieldName = TRIM(TPFX)//TRIM(Int2Spc(I)%Name)
           CALL ESMF_StateGet( INTSTATE, TRIM(fieldName), GcFld, RC=STATUS )
        ENDIF 
 ! GCHP does not try to TRC prefix:
@@ -2310,8 +2310,8 @@ CONTAINS
 ! GEOS-5 (but updated to use SPFX from gigc_historyexports_mod):
        ! This is mostly for testing 
        IF ( STATUS /= ESMF_SUCCESS ) THEN
-          IF( am_I_Root ) WRITE(*,*) 'Cannot find in internal state: ', &
-                                     TRIM(SPFX)//TRIM(Int2Spc(I)%Name),I
+          IF( am_I_Root ) WRITE(*,*) 'Cannot find in internal state for ', &
+                                     TRIM(Int2Spc(I)%Name),I
           Int2Spc(I)%Internal => NULL()
           CYCLE
        ENDIF
