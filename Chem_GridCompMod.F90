@@ -691,20 +691,9 @@ CONTAINS
                           Underscores = .FALSE., RC = RC )
           IF ( .NOT. FOUND ) FullName = TRIM(SUBSTRS(1))
 
-          ! Set some long names manually ...
-          SELECT CASE ( TRIM(SUBSTRS(1)) )
-             CASE ('OH')
-                FullName = 'Hydroxyl radical (OH, MW = 17.01 g mol-1)'
-             CASE ('HO2')
-                FullName = 'Hydroperoxyl radical (HO2, MW = 33.01 g mol-1)'
-             CASE ('O')
-                FullName = 'Molecular oxygen (O, MW = 16.01 g mol-1)'
-          END SELECT
-      
           ! Add to internal spec
           call MAPL_AddInternalSpec(GC, &
-               SHORT_NAME         = 'TRC_'//TRIM(SUBSTRS(1)), &
-               !LONG_NAME          = TRIM(SUBSTRS(1)),         &
+               SHORT_NAME         = TRIM(TPFX)//TRIM(SUBSTRS(1)), &
                LONG_NAME          = TRIM(FullName)//' mass mixing ratio total air', &
                UNITS              = 'kg kg-1',                &
                DIMS               = MAPL_DimsHorzVert,        &
@@ -779,8 +768,19 @@ CONTAINS
                              KppSpcID=-1, oDiagName = FullName, Found=Found, &
                              Underscores = .FALSE., RC = RC )
              IF ( .NOT. FOUND ) FullName = TRIM(SpcName)
+
+             ! Set some long names manually ...
+             SELECT CASE ( TRIM(SpcName) )
+                CASE ('OH')
+                   FullName = 'Hydroxyl radical (OH, MW = 17.01 g mol-1)'
+                CASE ('HO2')
+                   FullName = 'Hydroperoxyl radical (HO2, MW = 33.01 g mol-1)'
+                CASE ('O')
+                   FullName = 'Molecular oxygen (O, MW = 16.01 g mol-1)'
+             END SELECT
+
              CALL MAPL_AddInternalSpec(GC,                 &
-                SHORT_NAME         = TRIM(SPFX)//SpcName,      &
+                SHORT_NAME         = TRIM(SPFX)//TRIM(SpcName),      &
                 !LONG_NAME          = SpcName,              &
                 LONG_NAME          = TRIM(FullName)//' mass mixing ratio total air', &
                 UNITS              = 'kg kg-1',            &
