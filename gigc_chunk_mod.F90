@@ -899,23 +899,25 @@ CONTAINS
     ! Species arrive in kg/kg total. Convert to kg/kg dry 
     !=======================================================================
 
-    ! Adjust total mixing ratio to account for change in specific
-    ! humidity and dry air mass since end of last timestep. Always skip
-    ! first step and do not apply if transport is turned on. (ewl, 11/8/18)
-    IF ( (.NOT. FIRST) .AND. ( .NOT. Input_Opt%LTRAN ) ) THEN
-       DO N = 1, State_Chm%nSpecies
-       DO L = 1, LLPAR
-       DO J = 1, JJPAR
-       DO I = 1, IIPAR
-         State_Chm%Species(I,J,L,N) = State_Chm%Species(I,J,L,N)          &
-                 / ( 1e0_fp - ( State_Met%SPHU_PREV(I,J,L) * 1e-3_fp ) )  &
-                 * ( 1e0_fp - ( State_Met%SPHU(I,J,L) * 1e-3_fp ) )       &
-                 * State_Met%DP_DRY_PREV(I,J,L) / State_Met%DELP_DRY(I,J,L)    
-       ENDDO
-       ENDDO
-       ENDDO
-       ENDDO
-    ENDIF
+! The other components (advection, moist, etc.) should already take care of 
+! this, so comment for now (ckeller, 2/7/2019).
+!    ! Adjust total mixing ratio to account for change in specific
+!    ! humidity and dry air mass since end of last timestep. Always skip
+!    ! first step and do not apply if transport is turned on. (ewl, 11/8/18)
+!    IF ( (.NOT. FIRST) .AND. ( .NOT. Input_Opt%LTRAN ) ) THEN
+!       DO N = 1, State_Chm%nSpecies
+!       DO L = 1, LLPAR
+!       DO J = 1, JJPAR
+!       DO I = 1, IIPAR
+!         State_Chm%Species(I,J,L,N) = State_Chm%Species(I,J,L,N)          &
+!                 / ( 1e0_fp - ( State_Met%SPHU_PREV(I,J,L) * 1e-3_fp ) )  &
+!                 * ( 1e0_fp - ( State_Met%SPHU(I,J,L) * 1e-3_fp ) )       &
+!                 * State_Met%DP_DRY_PREV(I,J,L) / State_Met%DELP_DRY(I,J,L)    
+!       ENDDO
+!       ENDDO
+!       ENDDO
+!       ENDDO
+!    ENDIF
     
     ! Convert total mixing ratio to dry mixing ratio
     CALL Convert_Spc_Units ( am_I_Root, Input_Opt, State_Met, State_Chm, &
