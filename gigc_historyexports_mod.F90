@@ -106,12 +106,8 @@ MODULE GIGC_HistoryExports_Mod
 ! !PUBLIC PARAMETERS
 !
   ! Prefix of the species names in the internal state and HISTORY.rc
-#if defined( MODEL_GEOS )
   CHARACTER(LEN=4), PUBLIC, PARAMETER  :: TPFX = 'TRC_'
   CHARACTER(LEN=4), PUBLIC, PARAMETER  :: SPFX = 'SPC_'
-#else
-  CHARACTER(LEN=4), PUBLIC, PARAMETER  :: SPFX = 'SPC_'
-#endif
 !
 ! !REVISION HISTORY:
 !  01 Sep 2017 - E. Lundgren - Initial version
