@@ -75,7 +75,6 @@
   T2M                |     K	   | xy  |   |    |   |   |	|      |    | 2-meter-air_temperature
   T10M               |     K	   | xy  |   |    |   |   |	|      |    | 10-meter-air_temperature
   Z0H                |     m	   | xy  |   |    |   |   |	|      |    | surface_roughness_for_heat
-  AIRDENS_DRY        |   kg/m3     | xyz | C |    |   |   |	|      |    | dry_air_density
   ZLE                |     m	   | xyz | E |    |   |   |	|      |    | geopotential_height
   FCLD               |     1	   | xyz | C |    |   |   |	|      |    | cloud_fraction_for_radiation
   CNV_MFC            |  kg/m2/s    | xyz | E |    |   |   |	|      |    | cumulative_mass_flux
