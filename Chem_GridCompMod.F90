@@ -769,6 +769,12 @@ CONTAINS
                              Underscores = .FALSE., RC = RC )
              IF ( .NOT. FOUND ) FullName = TRIM(SpcName)
 
+             ! Error trap for POx and LOx. Their species names in the internal
+             ! state must be all caps
+             ! (ckeller, 3/11/19)
+             IF ( TRIM(SpcName) == 'POx' ) SpcName = 'POX'
+             IF ( TRIM(SpcName) == 'LOx' ) SpcName = 'LOX'
+
              ! Set some long names manually ...
              SELECT CASE ( TRIM(SpcName) )
                 CASE ('OH')
