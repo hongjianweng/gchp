@@ -97,4 +97,29 @@
      Ptr3D => NULL()
   ENDIF
 
+  !=========================================================================
+  ! Saved fields from ISORROPIA needed for heterogeneous chemistry
+  ! (ckeller, 3/9/19)
+  !=========================================================================
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'Iso_Hplus', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) ) THEN
+     Ptr3D(:,:,LM:1:-1) = State_Chm%HplusSav(:,:,:)
+  ENDIF
+  Ptr3D => NULL()
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'Iso_sulfate', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) ) THEN
+     Ptr3D(:,:,LM:1:-1) = State_Chm%SulRatSav(:,:,:)
+  ENDIF
+  Ptr3D => NULL()
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'Iso_nitrate', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) ) THEN
+     Ptr3D(:,:,LM:1:-1) = State_Chm%NaRatSav(:,:,:)
+  ENDIF
+  Ptr3D => NULL()
+  CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'Iso_bisulfate', notFoundOK=.TRUE., __RC__ )
+  IF ( ASSOCIATED(Ptr3D) ) THEN
+     Ptr3D(:,:,LM:1:-1) = State_Chm%BiSulSav(:,:,:)
+  ENDIF
+  Ptr3D => NULL()
+
 !EOF
