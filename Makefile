@@ -48,6 +48,7 @@
 #                              and gchp_utils
 #  21 Dec 2018 - E. Lundgren - Remove compilation condition that xxx.install 
 #                              does not exist
+#  23 Jan 2019 - E. Lundgren - Remove ESMF; now installed outside of GEOS-Chem
 #EOP
 #------------------------------------------------------------------------------
 #BOC
@@ -70,24 +71,6 @@ HELP=$(ROOTDIR)/help
 LIB=$(ROOTDIR)/lib
 MOD=$(ROOTDIR)/mod
 
-# This code here should get the exact number of the intel version (MDY)
-ifeq ($(ESMF_COMPILER),intel)
-  INTELVERSIONTEXT :=$(shell ifort --version))
-  INTELVERSIONTEXT :=$(sort $(INTELVERSIONTEXT))
-  LONGVERSION      :=$(word 3, $(INTELVERSIONTEXT))
-  MAJORVERSION     :=$(subst ., ,$(LONGVERSION))
-  MAJORVERSION     :=$(firstword $(MAJORVERSION))
-  MAJORVERSION     :=$(strip $(MAJORVERSION))
-else ifeq ($(ESMF_COMPILER),gfortran)
-  GNUVERSIONTEXT   :=$(shell gfortran -dumpversion))
-  LONGVERSION      :=$(GNUVERSIONTEXT))
-  MAJORVERSION     :=$(subst ., ,$(LONGVERSION))
-  MAJORVERSION     :=$(firstword $(MAJORVERSION))
-  MAJORVERSION     :=$(strip $(MAJORVERSION))
-else
-  MAJORVERSION     :="0"
-endif
-
 # Include header file.  This returns variables CC, F90, FREEFORM, LD, R8,
 # as well as the default Makefile compilation rules for source code files.
 include $(ROOTDIR)/Makefile_header.mk
@@ -96,52 +79,6 @@ include $(ROOTDIR)/Makefile_header.mk
 ifndef BASEDIR
  export BASEDIR=$(realpath $(ROOTDIR))
 endif 
-
-#-----------------------------------------------------------------------------
-# Settings for ESMF
-#-----------------------------------------------------------------------------
-
-# Directory where ESMF lives
-ifndef ESMF_DIR
-  export ESMF_DIR=$(CURDIR)/ESMF
-endif
-
-# Compiler for ESMF - eg intel, intelgcc, gfortran
-ifndef ESMF_COMPILER
-   $(error ESMF_COMPILER is not defined)
-endif
-
-# MPI type for ESMF
-ifndef ESMF_COMM
-   $(error ESMF_COMM is not defined)
-endif
-
-# Operating system type for ESMF
-ifndef ESMF_OS
-  export ESMF_OS=$(ARCH)
-endif
-
-# Optimization level for ESMF
-ifndef ESMF_BOPT
-  export ESMF_BOPT=O
-endif
-
-# Other ESMF directory settings
-export ESMF_INSTALL_PREFIX=$(ESMF_DIR)/$(ARCH)
-export ESMF_INSTALL_LIBDIR=$(ESMF_DIR)/$(ARCH)/lib
-export ESMF_INSTALL_MODDIR=$(ESMF_DIR)/$(ARCH)/mod
-export ESMF_INSTALL_HEADERDIR=$(ESMF_DIR)/$(ARCH)/include
-
-# Other ESMF compilation settings
-ifeq ($(ESMF_COMPILER),intel)
-  export ESMF_F90COMPILEOPTS=-align all -fPIC -traceback 
-else ifeq ($(ESMF_COMPILER),gfortran)
-  export ESMF_F90COMPILEOPTS=-falign-commons -fPIC -fbacktrace
-else
-  export ESMF_F90COMPILEOPTS=-fPIC
-endif
-export ESMF_CXXCOMPILEOPTS=-fPIC
-export ESMF_OPENMP=OFF
 
 #-----------------------------------------------------------------------------
 # Settings for MAPL
@@ -192,7 +129,6 @@ OBJ = $(TMP:.F90=.o)
 REGDIR    := Registry
 ACGS      := GIGCchem_ExportSpec___.h GIGCchem_GetPointer___.h \
              GIGCchem_DeclarePointer___.h GIGCchem_History___.rc
-#LIB_ESMF  := $(ESMF_DIR)/$(ARCH)/lib/libesmf.so
 #LIB_MAPL  := $(ESMADIR)/$(ARCH)/libMAPL_Base.a # At this point, we only check for MAPL_Base
 
 ###############################################################################
@@ -204,17 +140,8 @@ ACGS      := GIGCchem_ExportSpec___.h GIGCchem_GetPointer___.h \
 .PHONY: clean help baselibs
 
 baselibs:
-	@$(MAKE) baselibs_esmf
 	@$(MAKE) baselibs_mapl
 	@$(MAKE) baselibs_fvdycore
-
-baselibs_esmf:
-ifeq ($(wildcard $(ESMF_DIR)/esmf.install),)
-	$(MAKE) -C $(ESMF_DIR)
-	$(MAKE) -C $(ESMF_DIR) install
-	@touch $(ESMF_DIR)/esmf.install
-endif
-
 
 baselibs_mapl:
 ifeq ($(wildcard $(ESMADIR)/mapl.install),)
@@ -242,9 +169,6 @@ $(ACGS) : $(REGDIR)/Chem_Registry.rc $(REGDIR)/HEMCO_Registry.rc $(ACG) #$(REGDI
 ##	@$(ACG) $(ACG_FLAGS) $(REGDIR)/Dyn_Registry.rc
 	@$(ACG) $(ACG_FLAGS) $(REGDIR)/HEMCO_Registry.rc
 
-libesmf:
-	@$(MAKE) -C $(GCHP) esmf
-
 libmapl:
 	@$(MAKE) -C $(GCHP) mapl
 
@@ -265,20 +189,6 @@ gigc_debug gigc_help:
 	@echo "MOD                    : $(MOD)"
 	@echo "BASEDIR                : $(BASEDIR)"
 	@echo ""
-	@echo "Settings for ESMF"
-	@echo "----------------------------------------------------------"
-	@echo "ESMF_DIR               : $(ESMF_DIR)"
-	@echo "ESMF_COMPILER          : $(ESMF_COMPILER)"
-	@echo "ESMF_COMM              : $(ESMF_COMM)"
-	@echo "ESMF_OS                : $(ESMF_OS)"
-	@echo "ESMF_BOPT              : $(ESMF_BOPT)"
-	@echo "ESMF_INSTALL_PREFIX    : $(ESMF_INSTALL_PREFIX)"
-	@echo "ESMF_INSTALL_LIBDIR    : $(ESMF_INSTALL_LIBDIR)"
-	@echo "ESMF_INSTALL_MODDIR    : $(ESMF_INSTALL_MODDIR)"
-	@echo "ESMF_INSTALL_HEADERDIR : $(ESMF_INSTALL_HEADERDIR)"
-	@echo "ESMF_F90COMPILEOPTS    : $(ESMF_F90COMPILEOPTS)"
-	@echo "ESMF_CXXCOMPILEOPTS    : $(ESMF_CXXCOMPILEOPTS)"
-	@echo ""
 	@echo "Settings for MAPL"
 	@echo "----------------------------------------------------------"
 	@echo "ESMADIR                : $(ESMADIR)"
@@ -292,7 +202,7 @@ gigc_debug gigc_help:
 
 ###############################################################################
 ###                                                                         ###
-###  Targets to remove ESMF, MAPL, and FVDYCORE!                            ###
+###  Targets to remove MAPL and FVDYCORE!                                   ###
 ###  USE WITH EXTREME CAUTION!!!                                            ###
 ###                                                                         ###
 ###############################################################################
@@ -300,18 +210,8 @@ gigc_debug gigc_help:
 .PHONY: the_nuclear_option
 
 the_nuclear_option:
-	@$(MAKE) wipeout_esmf
 	@$(MAKE) wipeout_mapl
 	@$(MAKE) wipeout_fvdycore
-
-wipeout_esmf:
-	@echo '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-	@echo '%%%%%  Wiping out the ESMF installation    %%%%%'
-	@echo '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-	rm -f $(ESMF_DIR)/esmf.install
-	@$(MAKE) -C $(ESMF_DIR) distclean
-	rm -rf $(ESMF_DIR)/$(ARCH)
-	rm -f $(ESMF_DIR)/esmf.install
 
 wipeout_mapl:
 	@echo '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
