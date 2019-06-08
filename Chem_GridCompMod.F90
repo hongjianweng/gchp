@@ -3193,6 +3193,7 @@ CONTAINS
     ! Some checks for replay runs
     LOGICAL                      :: FIRSTREWIND
     LOGICAL                      :: AFTERREWIND
+    LOGICAL                      :: IsFirst
     INTEGER, SAVE                :: pymd = 0         ! previous date
     INTEGER, SAVE                :: phms = 0         ! previous time
     INTEGER, SAVE                :: nnRewind = 0
@@ -3738,9 +3739,10 @@ CONTAINS
 
 ! GEOS-5 only:
        ! Eventually initialize species concentrations from external field. 
-       IF ( InitFromFile .AND. ( FIRST .OR. FIRSTREWIND ) ) THEN 
-          CALL InitFromFile_( GC, Import, INTSTATE, Export, Clock, &
-                              Input_Opt,  State_Met, State_Chm, Q, __RC__ ) 
+       IF ( InitFromFile ) THEN
+          IsFirst = ( FIRST .OR. FIRSTREWIND )
+          CALL InitFromFile_( GC, Import, INTSTATE, Export, Clock, Input_Opt, &
+                              State_Met, State_Chm, Q, PLE, GCCTROPP, IsFirst, __RC__ ) 
        ENDIF
 !---
 
@@ -6665,8 +6667,8 @@ CONTAINS
 !\\
 ! !INTERFACE:
 !
-  SUBROUTINE InitFromFile_( GC, Import, Internal, Export, Clock, &
-                            Input_Opt,  State_Met, State_Chm, Q, RC )
+  SUBROUTINE InitFromFile_( GC, Import, Internal, Export, Clock, Input_Opt, &
+                            State_Met, State_Chm, Q, PLE, TROPP, First, RC )
 !
 ! !USES:
 !
@@ -6683,6 +6685,9 @@ CONTAINS
     TYPE(ChmState)                             :: State_Chm 
     TYPE(ESMF_Time)                            :: currTime
     REAL,                INTENT(IN)            :: Q(:,:,:)
+    REAL,                POINTER               :: PLE(:,:,:)
+    REAL,                POINTER               :: TROPP(:,:)
+    LOGICAL,             INTENT(IN)            :: First
 !
 ! !OUTPUT PARAMETERS:
 !
@@ -6712,13 +6717,21 @@ CONTAINS
     TYPE(ESMF_TIME)            :: time
     TYPE(ESMF_Field)           :: iFld 
     REAL, POINTER              :: Ptr3D(:,:,:) => NULL()
-    INTEGER                    :: varID, fid, N, L, LM1, LM2
+    REAL, ALLOCATABLE          :: Scal(:,:), Temp(:,:), wgt1(:,:), wgt2(:,:)
+    INTEGER                    :: varID, fid, N, L, LM2
+    INTEGER                    :: L1, L2, INC
+    INTEGER                    :: IM, JM, LM, LB
     INTEGER                    :: STATUS
     INTEGER                    :: nymd, nhms, yy, mm, dd, h, m, s, incSecs
     REAL                       :: MW
     LOGICAL                    :: FileExists
     INTEGER                    :: DoIt, idx, x1, x2
     LOGICAL                    :: ReadGMI 
+    LOGICAL                    :: OnGeosLev 
+    LOGICAL                    :: AboveTroppOnly
+    LOGICAL                    :: IsInPPBV
+    LOGICAL                    :: DoUpdate
+    INTEGER                    :: TopLev
     CHARACTER(LEN=ESMF_MAXSTR) :: GmiTmpl 
 
     ! Read GMI file
@@ -6727,7 +6740,8 @@ CONTAINS
     TYPE(MAPL_SimpleBundle)    :: GmiVarBundle
     TYPE(ESMF_TIME)            :: Gmitime
     LOGICAL                    :: GmiFileExists
- 
+    INTEGER, SAVE              :: OnlyOnFirst = -999 
+
     !=======================================================================
     ! Initialization
     !=======================================================================
@@ -6744,15 +6758,32 @@ CONTAINS
     ! Get GEOS-Chem resource file
     CALL Extract_( GC, Clock, GeosCF=GeosCF, __RC__ )
 
-!    ! Get current time
-!    CALL ESMF_ClockGet( Clock, currTime = time, __RC__ )
+    ! Check if we need to do update
+    IF ( OnlyOnFirst < 0 ) THEN 
+        CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = 'ONLY_ON_FIRST_STEP:', Default=1, __RC__ )
+        IF ( DoIt == 1 ) THEN
+           OnlyOnFirst = 1
+        ELSE
+           OnlyOnFirst = 0
+        ENDIF
+    ENDIF
+    DoUpdate = .FALSE.
+    IF ( OnlyOnFirst == 0             ) DoUpdate = .TRUE.
+    IF ( OnlyOnFirst == 1 .AND. First ) DoUpdate = .TRUE.
+
+    ! Do the following only if we need to...
+    IF ( DoUpdate ) THEN
+
+    ! Array size 
+    IM = SIZE(Q,1)
+    JM = SIZE(Q,2)
+    LM = SIZE(Q,3)
+
+    ! Lower bound of PLE 3rd dim
+    LB = LBOUND(PLE,3)
 
     ! Name of file to read internal state fields from
-    CALL ESMF_ConfigGetAttribute( GeosCF, ifile,                   &
-                                  Label   = "INIT_SPC_FILE:",  &
-                                  __RC__                            )
-
-    ! Verbose
+    CALL ESMF_ConfigGetAttribute( GeosCF, ifile, Label = "INIT_SPC_FILE:", __RC__ ) 
     IF ( am_I_Root ) WRITE(*,*) TRIM(Iam)//': reading species from '//TRIM(ifile)
 
     ! Check if file exists
@@ -6762,19 +6793,31 @@ CONTAINS
        ASSERT_(.FALSE.)
     ENDIF
 
-    ! Check for GMI flags
-    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt,               &
-                                  Label   = "USE_GMI_MESO:",  &
-                                  Default = 0, __RC__ )
-    ReadGMI = ( DoIt == 1 )
-    IF ( ReadGMI ) THEN
-       CALL ESMF_ConfigGetAttribute( GeosCF, GmiTmpl,            &
-                                     Label   = "GMI_TEMPLATE:",  &
-                                     __RC__                       )
+    ! Check for other flags
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = 'DATA_ON_GEOS_LEVELS:', Default=0, __RC__ )
+    OnGeosLev = ( DoIt == 1 )
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = 'ONLY_ABOVE_TROPOPAUSE:', Default=0, __RC__ )
+    AboveTroppOnly = ( DoIt == 1 )
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = 'DATA_IS_IN_PPBV:', Default=1, __RC__ )
+    IsInPPBV = ( DoIt == 1 )
+    CALL ESMF_ConfigGetAttribute( GeosCF, TopLev, Label = 'DO_NOT_OVERWRITE_ABOVE_LEVEL:', Default=LM, __RC__ )
+    IF ( TopLev < 0 ) TopLev = LM
+
+    ! Verbose
+    IF ( am_I_Root ) THEN
+       WRITE(*,*) 'Will use the following settings to overwrite restart variables:'
+       WRITE(*,*) 'External data is in ppbv: ',IsInPPBV
+       WRITE(*,*) 'External data is on GEOS levels: ',OnGeosLev
+       WRITE(*,*) 'Only overwrite above tropopause: ',AboveTroppOnly
+       WRITE(*,*) 'Maximum valid level (will be used above that level): ',TopLev
     ENDIF
 
-    ! # of vertical levels of Q
-    LM1 = SIZE(Q,3)
+    ! Check for GMI flags
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = "USE_GMI_MESO:", Default = 0, __RC__ )
+    ReadGMI = ( DoIt == 1 )
+    IF ( ReadGMI ) THEN
+       CALL ESMF_ConfigGetAttribute( GeosCF, GmiTmpl, Label = "GMI_TEMPLATE:", __RC__ )
+    ENDIF
 
     ! Get time stamp on file
     call GFIO_Open( ifile, 1, fid, STATUS )
@@ -6793,7 +6836,14 @@ CONTAINS
 
     ! Read file
     VarBundle = MAPL_SimpleBundleRead ( TRIM(iFile), grid, time, __RC__ )
-                                        
+          
+    ! Scal is the array with scale factors 
+    ALLOCATE(Scal(IM,JM),Temp(IM,JM),wgt1(IM,JM),wgt2(IM,JM))
+    Scal(:,:) = 1.0    
+    Temp(:,:) = 0.0
+    wgt1(:,:) = 0.0
+    wgt2(:,:) = 1.0
+
     ! Loop over all species
     DO N = 1, State_Chm%nSpecies
 
@@ -6803,42 +6853,70 @@ CONTAINS
 
        ! Construct field name
        SpcName = TRIM(State_Chm%SpcData(N)%Info%Name)
-       FldName = 'SPC_'//TRIM(SpcName)
- 
-       ! Check if variable is in file
-       VarID = MAPL_SimpleBundleGetIndex ( VarBundle, trim(FldName), 3, RC=STATUS, QUIET=.TRUE. )
-       IF ( VarID > 0 ) THEN
 
+       ! Check if variable is in file
+       FldName = 'SPC_'//TRIM(SpcName)
+       VarID = MAPL_SimpleBundleGetIndex ( VarBundle, trim(FldName), 3, RC=STATUS, QUIET=.TRUE. )
+   
+       ! Check other fieldname if default one is not found
+       IF ( VarID <= 0 ) THEN
+          FldName = 'TRC_'//TRIM(SpcName)
+          VarID = MAPL_SimpleBundleGetIndex ( VarBundle, trim(FldName), 3, RC=STATUS, QUIET=.TRUE. )
+       ENDIF
+       IF ( VarID <= 0 ) THEN
+          FldName = TRIM(SpcName)
+          VarID = MAPL_SimpleBundleGetIndex ( VarBundle, trim(FldName), 3, RC=STATUS, QUIET=.TRUE. )
+       ENDIF
+       IF ( VarID > 0 ) THEN
           ! Make sure vertical dimensions match
           LM2 = SIZE(VarBundle%r3(VarID)%q,3)
 
           ! Error if vertical dimensions do not agree
-          IF ( LM1 /= LM2 ) THEN
+          IF ( LM2 /= LM ) THEN
              IF ( am_I_Root ) THEN
-                WRITE(*,*) 'Wrong # of vert. levels for variable ',TRIM(FldName), ' ',LM2,' vs. ',LM1
+                WRITE(*,*) 'Wrong # of vert. levels for variable ',TRIM(FldName), ' ',LM2,' vs. ',LM
              ENDIF
-             ASSERT_( LM1==LM2 )
+             ASSERT_( LM==LM2 )
           ENDIF
 
-          ! Pass to State_Chm, convert v/v to kg/kg. Assume that pointer data is
-          ! already on GEOS-Chem vertical coordinates (1=surface level).
-          State_Chm%Species(:,:,:,N) = VarBundle%r3(VarID)%q(:,:,:) * MW / MAPL_AIRMW * ( 1 - Q(:,:,LM1:1:-1) )
+          ! Loop over all vertical levels
+          DO L = 1, LM
+             ! Scale factor for unit conversion
+             IF ( IsInPPBV ) THEN
+                Scal(:,:) =  MW / MAPL_AIRMW * ( 1 - Q(:,:,L) )
+                IF(L==1 .and. am_I_Root ) WRITE(*,*) 'Convert units from ppbv to kg/kg: ',TRIM(FldName), MW
+             ENDIF
 
-          ! Data above L59 is zero. Use L59 values for mesosphere (ckeller, 7/11/18)
-          IF ( LM1 == 72 ) THEN
-             DO L=60,72
-                State_Chm%Species(:,:,L,N) = State_Chm%Species(:,:,59,N)
+             ! Pass to temporary array
+             IF ( OnGeosLev ) THEN
+                Temp(:,:) = VarBundle%r3(VarID)%q(:,:,L) * Scal 
+             ELSE
+                Temp(:,:) = VarBundle%r3(VarID)%q(:,:,LM-L+1) * Scal 
+             ENDIF
+
+             ! Flag for stratosphere only
+             IF ( AboveTroppOnly ) THEN
+                wgt1 = MAX(0.0,MIN(1.0,(PLE(:,:,L+LB)-TROPP(:,:))/(PLE(:,:,L+LB)-PLE(:,:,L+LB-1))))
+                wgt2 = 1.0 - wgt1 
+             ENDIF
+
+             ! Pass to State_Chm
+             State_Chm%Species(:,:,LM-L+1,N) = State_Chm%Species(:,:,LM-L+1,N)*wgt1 + Temp(:,:)*wgt2
+          ENDDO
+ 
+          ! Check for cap at given level 
+          IF ( TopLev < LM ) THEN
+             DO L = TopLev+1,LM
+                State_Chm%Species(:,:,L,N) = State_Chm%Species(:,:,TopLev,N)
              ENDDO
-             IF ( am_I_Root ) WRITE(*,*) 'Fill mesosphere with L59 value: ',TRIM(FldName)
-          ELSE
-             IF ( am_I_Root ) WRITE(*,*) 'WARNING: your mesosphere values may be zero!!!'
+             IF ( am_I_Root ) WRITE(*,*) 'Extend values from level ',TopLev,' to top of atmosphere: ',TRIM(FldName)
           ENDIF
 
           ! Verbose
           IF ( am_I_Root ) WRITE(*,*) 'Species initialized from external field: ',TRIM(FldName)
 
        ELSE
-          IF ( am_I_Root ) WRITE(*,*) 'Species unchanged, field not found: ',TRIM(FldName)
+          IF ( am_I_Root ) WRITE(*,*) 'Species unchanged, field not found for species ',TRIM(SpcName)
        ENDIF
 
        ! ---------------------------
@@ -6890,8 +6968,18 @@ CONTAINS
 
     ENDDO
 
+    ! Deallocate helper array
+    IF ( ALLOCATED(Scal) ) DEALLOCATE(Scal) 
+    IF ( ALLOCATED(Temp) ) DEALLOCATE(Temp) 
+    IF ( ALLOCATED(wgt1) ) DEALLOCATE(wgt1)
+    IF ( ALLOCATED(wgt2) ) DEALLOCATE(wgt2)
+
     ! All done
     CALL MAPL_SimpleBundleDestroy ( VarBundle, __RC__ )
+
+    ENDIF ! DoUpdate 
+
+    ! Return
     RETURN_(ESMF_SUCCESS)
 
   END SUBROUTINE InitFromFile_ 
