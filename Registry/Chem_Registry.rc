@@ -241,6 +241,8 @@
   NO_sensitivity                  | 1              | xyz | C |    |   |   |     | NO_sensitivity
   NOy	                          | mol mol-1      | xyz | C |    |   |   |	| reactive_nitrogen_=_NO_NO2_HNO3_HNO4_HONO_2xN2O5_PAN_OrganicNitrates_AerosolNitrates
   Bry	                          | mol mol-1      | xyz | C |    |   |   |	| inorganic_bromine_=_2xBr2_Br_BrO_HOBr_HBr_BrNO2_BrNO3_BrCl_IBr
+i Cly                             | mol mol-1      | xyz | C |    |   |   |     | Inorganic_chlorine_=_Cl_ClO_OClO_ClOO_HOCl_HCl_ClNO2_ClNO3_BrCl_ICl_2xCl2_2xCl2O2
+  OrganicCl                       | mol mol-1      | xyz | C |    |   |   |     | 4CCl4_H1211_3CFC11_3CFC113_2CFC114_CFC115_2CFC12_3CH3CCl3_CH3Cl_2HCFC141b_HCFC142b_HCFC22_2HCFC123_3CHCl3_2CH2Cl2_CH2ICl
   DryDepRa2m                      | s cm-1         | xy  |   |    |   |   |     | 2_meter_aerodynamic_resistance 
   DryDepRa10m                     | s cm-1         | xy  |   |    |   |   |     | 10_meter_aerodynamic_resistance 
   MoninObukhov                    | m              | xy  |   |    |   |   |     | Monin_Obukhov_length 
@@ -259,11 +261,13 @@
   O3concAfterChem                 | molec cm-3     | xyz | C |    |   |   |     | Ozone_number_density_after_chemistry
   RO2concAfterChem                | molec cm-3     | xyz | C |    |   |   |     | Peroxy_radical_number_density_ater_chemistry
   OHconcAfterChem                 | molec cm-3     | xyz | C |    |   |   |     | OH_number_density_after_chemistry
+  OH_AirMassWgt                   | molec cm-3     | xy  |   |    |   |   |     | Vertically_integrated_OH_number_density_weighted_by_air_mass
   NOx_tau                         | s              | xyz | C |    |   |   |     | NOx_chemical_lifetime_against_OH
   NO2toNOx                        | 1              | xyz | C |    |   |   |     | NO2toNOx_ratio
   FJX_EXTRAL_NLEVS                | 1              | xy  |   |    |   |   |     | FAST-JX_EXTRAL_layers 
   FJX_EXTRAL_NITER                | 1              | xy  |   |    |   |   |     | FAST-JX_EXTRAL_iterations
   GCC_SUNCOS                      | 1              | xy  |   |    |   |   |     | SUNCOS 
+  GCC_SZA                         | degrees        | xy  |   |    |   |   |     | GEOS-Chem_solar_zenith_angle
 # --------------------------------|----------------|-----|---|----|---|---|-----|---------------------------------
 </ExportSpec>
 #                               --------------

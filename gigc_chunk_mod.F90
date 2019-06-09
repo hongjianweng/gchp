@@ -32,7 +32,7 @@ MODULE GIGC_Chunk_Mod
 ! !PRIVATE MEMBER FUNCTIONS:
 !
   PRIVATE :: SET_OZONOPAUSE   ! GEOS-5 only
-!  PRIVATE :: StateDiag2Export ! GEOS-5 only
+  PRIVATE :: StateDiag2Export ! GEOS-5 only
 !
 ! !REVISION HISTORY:
 !  22 Jun 2009 - R. Yantosca & P. Le Sager - Chunkized & cleaned up.
@@ -1256,6 +1256,14 @@ CONTAINS
     CALL HCOI_GC_WriteDiagn( am_I_Root, Input_Opt, .FALSE., RC )
     ASSERT_(RC==GC_SUCCESS)
 
+    ! Pass arrays from State_Diag to MAPL Export
+#if defined( MODEL_GEOS )
+    CALL StateDiag2Export ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+                            State_Diag, Diag_List, HcoState%EXPORT, &
+                            DoChem, DoDryDep, Phase, IM, JM, LM, RC )
+    ASSERT_(RC==GC_SUCCESS)
+#endif
+
     CALL MAPL_TimerOff( STATE, 'GC_DIAGN' )
 !---
 
@@ -1549,6 +1557,7 @@ CONTAINS
     USE DiagList_Mod,    ONLY : DgnList 
     USE DIAG_MOD,        ONLY : AD21
     USE DIAG_OH_MOD,     ONLY : OH_MASS, AIR_MASS 
+    USE PhysConstants,   ONLY : PI_180
 !
 ! !INPUT PARAMETERS:
 !
@@ -1947,6 +1956,18 @@ CONTAINS
     ENDIF
 
     ! Some met variables 
+    DiagName = 'GCC_SUNCOS'
+    CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(Ptr2D) ) THEN
+       ! AIRNUMDEN is in molec cm-3, convert to mol cm-3
+       Ptr2D = State_Met%SUNCOSmid
+    ENDIF
+    DiagName = 'GCC_SZA'
+    CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(Ptr2D) ) THEN
+       Ptr2D  = acos(MIN(MAX(State_Met%SUNCOSmid,-1._fp),1._fp))/PI_180
+    ENDIF
+
     DiagName = 'GCC_AIRNUMDEN'
     CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(Ptr3D) ) THEN

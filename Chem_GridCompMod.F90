@@ -4327,6 +4327,12 @@ CONTAINS
     !=======================================================================
     CALL CalcSpeciesDiagnostics_ ( am_I_Root, Input_Opt, State_Met, State_Chm, &
                                    State_Diag, IMPORT, EXPORT, IntState, Q, __RC__ )
+
+    !=======================================================================
+    ! Mass-weighted OH
+    !=======================================================================
+    CALL MassWeightedOH_ ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+                           State_Diag, IMPORT, EXPORT, IntState, Q, PLE, TROPP, __RC__ )
 !---
 
 ! GEOS-5 (also in gigc_providerservices_mod routine Provider_FillBundles, but 
@@ -6223,18 +6229,19 @@ CONTAINS
     ! Scalars
     INTEGER                    :: STATUS
     INTEGER                    :: I, J, N, IM, JM, LM, DryID
-    LOGICAL                    :: IsBry, IsNOy,  DoPM25
+    LOGICAL                    :: IsBry, IsNOy,  IsCly, IsOrgCl, DoPM25
     LOGICAL                    :: RunMe, IsPM25, IsSOA, IsNi, IsSu, IsOC, IsBC, IsDu, IsSS
     CHARACTER(LEN=ESMF_MAXSTR) :: Iam           ! Gridded component name
     CHARACTER(LEN=ESMF_MAXSTR) :: FieldName, SpcName
     REAL                       :: MW
     REAL                       :: Ra_z0, Ra_2m, Ra_10m
     REAL                       :: t_, rho_, fhs_, ustar_, dz_, z0h_
-    REAL                       :: BrCoeff
+    REAL                       :: BrCoeff, ClCoeff, OrgClCoeff
 !    REAL, ALLOCATABLE          :: Ra2m(:,:), Ra10m(:,:)
 !    REAL, ALLOCATABLE          :: Lz0(:,:),  L2m(:,:), L10m(:,:)
     REAL, POINTER              :: Ptr3D(:,:,:), PtrTmp(:,:,:), Ptr2D(:,:)
     REAL, POINTER              :: Bry(:,:,:), NOy(:,:,:), Ptr2m(:,:), Ptr10m(:,:)
+    REAL, POINTER              :: Cly(:,:,:), OrgCl(:,:,:) 
     REAL, ALLOCATABLE          :: CONV(:,:), MyPM25(:,:,:)
     TYPE(Species), POINTER     :: SpcInfo
 
@@ -6339,6 +6346,10 @@ CONTAINS
     IF ( ASSOCIATED(NOy) ) NOy = 0.0
     CALL MAPL_GetPointer( EXPORT, Bry, 'Bry', NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(Bry) ) Bry = 0.0
+    CALL MAPL_GetPointer( EXPORT, Cly, 'Cly', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(Cly) ) Cly = 0.0
+    CALL MAPL_GetPointer( EXPORT, OrgCl, 'OrganicCl', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(OrgCl) ) OrgCl = 0.0
 
     ! Check for PM25 diagnostics
     CALL MAPL_GetPointer( EXPORT, PtrPM25         , 'myPM25'         , &
@@ -6426,6 +6437,7 @@ CONTAINS
        ELSE
           IsNOy = .FALSE.
        ENDIF
+       IF ( IsNOy ) RunMe = .TRUE.
 
        ! Is this a Bry species?
        BrCoeff = 0.0
@@ -6443,6 +6455,49 @@ CONTAINS
        ELSE
           IsBry = .FALSE.
        ENDIF
+       IF ( IsBry ) RunMe = .TRUE.
+
+       ! Is this a Cly species?
+       ClCoeff = 0.0
+       IF ( ASSOCIATED(Cly) ) THEN
+          SELECT CASE ( TRIM(SpcName) )
+             CASE ( 'Cl', 'ClO', 'OClO', 'ClOO', 'HOCl', 'HCl', 'ClNO2', 'ClNO3', 'BrCl', 'ICl' )
+                ClCoeff = 1.0
+                IsCly   = .TRUE.
+             CASE ( 'Cl2', 'Cl2O2' )
+                ClCoeff = 2.0
+                IsCly   = .TRUE.
+             CASE DEFAULT
+                IsCly = .FALSE.
+          END SELECT
+       ELSE
+          IsCly = .FALSE.
+       ENDIF
+       IF ( IsCly ) RunMe = .TRUE.
+
+       ! Is this an OrgCl species?
+       OrgClCoeff = 0.0
+       IF ( ASSOCIATED(Cly) ) THEN
+          SELECT CASE ( TRIM(SpcName) )
+             CASE ( 'H1211', 'CFC115', 'CH3Cl', 'HCFC142b', 'HCFC22', 'CH2ICl' )
+                OrgClCoeff = 1.0
+                IsOrgCl    = .TRUE.
+             CASE ( 'CFC114', 'CFC12', 'HCFC141b', 'HCFC123', 'CH2Cl2' )
+                OrgClCoeff = 2.0
+                IsOrgCl    = .TRUE.
+             CASE ( 'CFC11', 'CFC113', 'CH3CCl3', 'CHCl3' ) 
+                OrgClCoeff = 3.0
+                IsOrgCl    = .TRUE.
+             CASE ( 'CCl4' ) 
+                OrgClCoeff = 4.0
+                IsOrgCl    = .TRUE.
+             CASE DEFAULT
+                IsOrgCl = .FALSE.
+          END SELECT
+       ELSE
+          IsOrgCl = .FALSE.
+       ENDIF
+       IF ( IsOrgCl ) RunMe = .TRUE.
 
        ! Is this a PM25 component?
        IF ( DoPM25 ) THEN
@@ -6482,7 +6537,7 @@ CONTAINS
 
        ! Fill exports
        IF ( ASSOCIATED(Ptr3D)  .OR. IsNOy .OR. ASSOCIATED(Ptr2m) .OR. &
-            ASSOCIATED(Ptr10m) .OR. IsBry ) RunMe = .TRUE.
+            ASSOCIATED(Ptr10m) ) RunMe = .TRUE.
        IF ( RunMe ) THEN
 
           MW = SpcInfo%EmMW_g
@@ -6522,8 +6577,18 @@ CONTAINS
 
           !====================================================================
           ! Bry concentration
-          !====================================================================
           IF ( IsBry ) Bry = Bry + BrCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
+          !====================================================================
+
+          !====================================================================
+          ! Cly concentration
+          !====================================================================
+          IF ( IsCly ) Cly = Cly + ClCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
+
+          !====================================================================
+          ! OrgCl concentration
+          !====================================================================
+          IF ( IsOrgCl ) OrgCl = OrgCl + OrgClCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
 
           !==================================================================
           ! PM2.5 diagnostics. Calculate PM25 according to 
@@ -6652,6 +6717,129 @@ CONTAINS
     RETURN_(ESMF_SUCCESS)
 
   END SUBROUTINE CalcSpeciesDiagnostics_
+!EOC
+!------------------------------------------------------------------------------
+!     NASA/GSFC, Global Modeling and Assimilation Office, Code 910.1 and      !
+!          Harvard University Atmospheric Chemistry Modeling Group            !
+!------------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: MassWeightedOH_ 
+!
+! !DESCRIPTION: MassWeightedOH_ computes vertically integrated OH weighted 
+!  by mass (troposphere only). 
+!\\
+!\\
+! !INTERFACE:
+!
+  SUBROUTINE MassWeightedOH_ ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+                               State_Diag, IMPORT, EXPORT, INTSTATE, Q, PLE, TROPP, RC )
+!
+! !USES:
+!
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+    LOGICAL,             INTENT(IN)            :: am_I_Root
+    TYPE(OptInput),      INTENT(INOUT)         :: Input_Opt
+    TYPE(MetState),      INTENT(INOUT)         :: State_Met
+    TYPE(ChmState),      INTENT(INOUT)         :: State_Chm
+    TYPE(DgnState),      INTENT(INOUT)         :: State_Diag
+    TYPE(ESMF_State),    INTENT(INOUT)         :: Import   ! Import State
+    TYPE(ESMF_State),    INTENT(INOUT)         :: Export   ! Export State
+    TYPE(ESMF_STATE),    INTENT(INOUT)         :: INTSTATE
+    REAL,                POINTER               :: Q(:,:,:)
+    REAL,                POINTER               :: PLE  (:,:,:)
+    REAL,                POINTER               :: TROPP(:,:  )
+!
+! !OUTPUT PARAMETERS:
+!
+    INTEGER,             INTENT(INOUT)         :: RC       ! Success or failure?
+!
+! !REMARKS:
+!
+! !REVISION HISTORY:
+!  01 Feb 2019 - C. Keller   - Initial version
+!EOP
+!------------------------------------------------------------------------------
+!BOC
+!
+! LOCAL VARIABLES:
+!
+    ! Objects
+
+    ! Scalars
+    INTEGER                    :: STATUS
+    INTEGER                    :: I, J, L, N, IM, JM, LM, LB, id_OH
+    CHARACTER(LEN=ESMF_MAXSTR) :: Iam           ! Gridded component name
+    CHARACTER(LEN=ESMF_MAXSTR) :: SpcName
+    REAL                       :: MW_kg
+    REAL, POINTER              :: MeanOH(:,:)
+    REAL*8                     :: air_mass, oh_mass, oh_molec, wgt, mwgt, molair
+    TYPE(Species), POINTER     :: SpcInfo
+
+    !=======================================================================
+    ! Routine starts here 
+    !=======================================================================
+
+    ! Identify this routine to MAPL
+    Iam = 'GCC::MassWeightedOH_'
+
+    ! Check for diagnostics
+    CALL MAPL_GetPointer( EXPORT, MeanOH,  'OH_AirMassWgt', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(MeanOH) ) THEN
+       ! Reset
+       MeanOH = 0.0
+
+       ! Get OH species index 
+       id_OH = -1
+       DO N=1,State_Chm%nSpecies
+          SpcInfo   => State_Chm%SpcData(N)%Info ! Species database
+          IF ( TRIM(SpcInfo%Name) == "OH" ) THEN
+             id_OH = N
+             IF ( SpcInfo%emMW_g > 0.0 ) THEN
+                MW_kg = SpcInfo%emMW_g * 1.e-3
+             ELSE
+                MW_kg = 1.0 * 1.e-3
+             ENDIF
+             EXIT
+          ENDIF
+       ENDDO
+       ASSERT_( id_OH > 0 )
+
+       ! Grid size
+       IM = SIZE(Q,1)
+       JM = SIZE(Q,2)
+       LM = SIZE(Q,3)
+
+       ! Lower bound of PLE 3rd dim
+       LB = LBOUND(PLE,3)
+
+       ! Compute mass weighted OH per grid box, troposphere only
+       DO J = 1,JM
+       DO I = 1,IM
+          air_mass = 0.0d0
+          oh_mass  = 0.0d0
+          DO L = 1,LM
+             wgt  = MAX(0.0,MIN(1.0,(PLE(I,J,L+LB)-TROPP(I,J)) &
+                  /(PLE(I,J,L+LB)-PLE(I,J,L+LB-1))))
+             IF ( wgt > 0.0d0 ) THEN
+                molair   = State_Met%AIRNUMDEN(I,J,LM-L+1) / AVO 
+                mwgt     = wgt * molair * State_Met%AIRVOL(I,J,LM-L+1) * 1d-9
+                air_mass = air_mass + mwgt 
+                oh_molec = State_Chm%Species(I,J,LM-L+1,id_OH) / ( 1 - Q(I,J,L) ) &
+                         * State_Met%AIRDEN(I,J,LM-L+1) * ( AVO / MW_kg ) / 1d+9
+                oh_mass  = oh_mass +  oh_molec * 1d-5 * mwgt
+             ENDIF
+          ENDDO
+          IF ( air_mass > 0.0d0 ) MeanOH(I,J) = oh_mass / air_mass * 1e5 *1e3
+       ENDDO
+       ENDDO
+    ENDIF
+ 
+    RETURN_(ESMF_SUCCESS)
+
+  END SUBROUTINE MassWeightedOH_
 !EOC
 !------------------------------------------------------------------------------
 !     NASA/GSFC, Global Modeling and Assimilation Office, Code 910.1 and      !
