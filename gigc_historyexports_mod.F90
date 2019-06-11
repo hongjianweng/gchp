@@ -160,14 +160,16 @@ CONTAINS
        ASSERT_(.FALSE.)
        RETURN
     ENDIF
-    CALL Print_DiagList( am_I_Root, HistoryConfig%DiagList, RC )
+    ! Optional debugging
+    !CALL Print_DiagList( am_I_Root, HistoryConfig%DiagList, RC )
 
     CALL Init_HistoryExportsList( am_I_Root, HistoryConfig, RC )
     IF ( RC == GC_FAILURE ) THEN
        ASSERT_(.FALSE.)
        RETURN
     ENDIF
-    CALL Print_HistoryExportsList( am_I_Root, HistoryConfig, RC )
+    ! Optional debugging
+    !CALL Print_HistoryExportsList( am_I_Root, HistoryConfig, RC )
 
   END SUBROUTINE Init_HistoryConfig
 !EOC
@@ -246,7 +248,8 @@ CONTAINS
 
        ! Skip emissions diagnostics since handled by HEMCO
        ! Will need to revisit this since name may change
-       IF ( INDEX( current%name,  'EMIS' ) == 1 ) THEN
+       IF ( INDEX( current%name,  'EMIS' ) == 1 .or. &
+            INDEX( current%name,  'INV'  ) == 1 ) THEN
           current => current%next
           CYCLE
        ENDIF
@@ -494,7 +497,6 @@ CONTAINS
     ! Append_HistoryExportsList begins here
     ! ================================================================
     __Iam__('Append_HistoryExportsList (gigc_historyexports_mod.F90)')
-    RC = GC_SUCCESS
 
     ! Add new object to the beginning of the linked list
     HistoryExport%next => HistoryConfig%HistoryExportsList%head
@@ -543,7 +545,6 @@ CONTAINS
     TYPE(HistoryExportObj), POINTER :: current
 
     __Iam__('Check_HistoryExportsList (gigc_historyexports_mod.F90)')
-    RC = GC_SUCCESS
 
     ! Assume not found
     found = .False.
@@ -630,10 +631,10 @@ CONTAINS
     ENDIF
     current => HistoryConfig%HistoryExportsList%head
     DO WHILE ( ASSOCIATED( current ) )
+       IF ( am_I_Root ) PRINT *, "adding export: ", TRIM(current%name)       
        ! Create an export for this item
        IF ( current%rank == 3 ) THEN
           IF ( current%vloc == VLocationCenter ) THEN
-             IF ( am_I_Root ) PRINT *, "adding export: ", TRIM(current%name)
              CALL MAPL_AddExportSpec(GC,                                     &
                                      SHORT_NAME = TRIM(current%name),        &
                                      LONG_NAME  = TRIM(current%long_name),   &
@@ -849,8 +850,6 @@ CONTAINS
     ! Print_HistoryExportsList begins here
     ! ================================================================
     __Iam__('Print_HistoryExportsList (gigc_historyexports_mod.F90)')
-
-    RC = GC_SUCCESS
 
     ! Loop over the History Exports list
     current => HistoryConfig%HistoryExportsList%head
