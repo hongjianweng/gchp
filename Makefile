@@ -44,8 +44,10 @@
 #                              making distclean, for safety's sake.
 #  12 Dec 2014 - R. Yantosca - Define defaults for  ESMF, MAPL, FVdycore
 #                              that can be overridden by cmd line or env var
-#  08 Mar 2018 - E. Lundgren - Remove gigc_initialization_mod, gigc_types_mod, and
-#                              gchp_utils (see git history for other updates in past yr)
+#  08 Mar 2018 - E. Lundgren - Remove gigc_initialization_mod, gigc_types_mod, 
+#                              and gchp_utils
+#  21 Dec 2018 - E. Lundgren - Remove compilation condition that xxx.install 
+#                              does not exist
 #EOP
 #------------------------------------------------------------------------------
 #BOC
@@ -68,15 +70,7 @@ HELP=$(ROOTDIR)/help
 LIB=$(ROOTDIR)/lib
 MOD=$(ROOTDIR)/mod
 
-# GEOS-5 assumes ifort:
 # This code here should get the exact number of the intel version (MDY)
-INTELVERSIONTEXT :=$(shell ifort --version))
-INTELVERSIONTEXT :=$(sort $(INTELVERSIONTEXT))
-LONGVERSION      :=$(word 3, $(INTELVERSIONTEXT))
-MAJORVERSION     :=$(subst ., ,$(LONGVERSION))
-MAJORVERSION     :=$(firstword $(MAJORVERSION))
-MAJORVERSION     :=$(strip $(MAJORVERSION))
-# GCHP does not:
 ifeq ($(ESMF_COMPILER),intel)
   INTELVERSIONTEXT :=$(shell ifort --version))
   INTELVERSIONTEXT :=$(sort $(INTELVERSIONTEXT))
@@ -93,7 +87,6 @@ else ifeq ($(ESMF_COMPILER),gfortran)
 else
   MAJORVERSION     :="0"
 endif
-#---
 
 # Include header file.  This returns variables CC, F90, FREEFORM, LD, R8,
 # as well as the default Makefile compilation rules for source code files.
@@ -113,19 +106,6 @@ ifndef ESMF_DIR
   export ESMF_DIR=$(CURDIR)/ESMF
 endif
 
-# GEOS-5 does not require ESMF_COMPILER and ESMF_COMM to be pre-defined:
-# Compiler for ESMF
-ifndef ESMF_COMPILER
-#  export ESMF_COMPILER=intelgcc
-  export ESMF_COMPILER=intel
-endif
-
-# MPI type for ESMF
-ifndef ESMF_COMM
-#  export ESMF_COMM=openmpi
-  export ESMF_COMM=mvapich2
-endif
-# GCHP does:
 # Compiler for ESMF - eg intel, intelgcc, gfortran
 ifndef ESMF_COMPILER
    $(error ESMF_COMPILER is not defined)
@@ -135,7 +115,6 @@ endif
 ifndef ESMF_COMM
    $(error ESMF_COMM is not defined)
 endif
-#---
 
 # Operating system type for ESMF
 ifndef ESMF_OS
@@ -154,9 +133,6 @@ export ESMF_INSTALL_MODDIR=$(ESMF_DIR)/$(ARCH)/mod
 export ESMF_INSTALL_HEADERDIR=$(ESMF_DIR)/$(ARCH)/include
 
 # Other ESMF compilation settings
-# GEOS-5 assumes intel:
-export ESMF_F90COMPILEOPTS=-align all -fPIC -traceback 
-# GCHP does not:
 ifeq ($(ESMF_COMPILER),intel)
   export ESMF_F90COMPILEOPTS=-align all -fPIC -traceback 
 else ifeq ($(ESMF_COMPILER),gfortran)
@@ -164,7 +140,6 @@ else ifeq ($(ESMF_COMPILER),gfortran)
 else
   export ESMF_F90COMPILEOPTS=-fPIC
 endif
-#---
 export ESMF_CXXCOMPILEOPTS=-fPIC
 export ESMF_OPENMP=OFF
 
@@ -253,6 +228,7 @@ endif
 
 baselibs_fvdycore:
 ifeq ($(wildcard $(FVDIR)/fvdycore.install),)
+	@echo "<><>"
 	$(MAKE) -C $(FVDIR) ESMADIR=$(ESMADIR) install
 	@touch $(FVDIR)/fvdycore.install
 endif
@@ -374,26 +350,26 @@ wipeout_fvdycore:
 ###                                                                         ###
 ###############################################################################
 
-GEOSChem.o		    : GEOSChem.F90                             \
+GEOSChem.o		    : GEOSChem.F90                                  \
                               GIGC_GridCompMod.o
 
-Chem_GridCompMod.o          : Chem_GridCompMod.F90                     \
-		              gigc_chunk_mod.o                         \
-                              gigc_historyexports_mod.o                \
+Chem_GridCompMod.o          : Chem_GridCompMod.F90                          \
+			      gigc_chunk_mod.o                              \
+                              gigc_historyexports_mod.o                     \
                               gigc_providerservices_mod.o
 
-GIGC_GridCompMod.o          : GIGC_GridCompMod.F90                     \
-                              Chem_GridCompMod.o                       \
+GIGC_GridCompMod.o          : GIGC_GridCompMod.F90                          \
+                              Chem_GridCompMod.o                            \
 	                      GEOS_ctmEnvGridComp.o
 
 GEOS_ctmEnvGridComp.o	    : GEOS_ctmEnvGridComp.F90
 
-gigc_chunk_mod.o            : gigc_chunk_mod.F90                       \
-                              gigc_historyexports_mod.o                \
+gigc_chunk_mod.o            : gigc_chunk_mod.F90                            \
+                              gigc_historyexports_mod.o                     \
 
 gigc_historyexports_mod.o   : gigc_historyexports_mod.F90
 
-gigc_providerservices_mod.o : gigc_providerservices_mod.F90            \
-                              gigc_historyexports_mod.o
+gigc_providerservices_mod.o : gigc_providerservices_mod.F90
+
 #EOC
 

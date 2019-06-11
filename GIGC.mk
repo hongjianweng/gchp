@@ -46,21 +46,14 @@ endif
 # uncomment the settings for MPI_LIB based on the appropriate version. 
 # Hopefully this can be automated in future versions.
 #==============================================================================
-# GEOS-5 assumes mpich (is this file used?):
-# %%%%% OpenMPI settings %%%%%
-#MPI_LIB       := $(shell mpif90 --showme:link)
-#MPI_LIB       += $(shell mpicxx --showme:link)
-# %%%%% OpenMPI manual setting %%%%%
-#MPI_LIB       := -L$(dir $(shell which mpif90))../lib -lmpi_mpifh -lmpi_cxx -lmpi -lopen-rte -lopen-pal
-# %%%%% MVAPICH %%%%% 
-MPI_LIB       := -L$(dir $(shell which mpif90))../lib -lmpich -lmpichf90
-# %%%%% Generic MPI --- testing %%%%%
-#MPI_LIB       := -L$(dir $(shell which mpif90))../lib -lmpi -lmpi++
-# GCHP does not (ESMF_COMM must be set):
 ifeq ($(ESMF_COMM),openmpi)
    # %%%%% OpenMPI settings %%%%%
    MPI_LIB       := $(shell mpif90 --showme:link)
    MPI_LIB       += $(shell mpicxx --showme:link)
+   ifeq ($(COMPILER),gfortran)
+      # Force usage of GCC libstdc++ rather than system version (ewl, 8/22/18)
+      MPI_LIB       += -L$(GCC_HOME)/lib64 -lstdc++
+   endif
 else ifeq ($(ESMF_COMM),mvapich2)
    # %%%%% MVAPICH %%%%% 
    MPI_LIB       := -L$(dir $(shell which mpif90))../lib64 -lmpich -lmpichf90
@@ -78,7 +71,6 @@ else
 endif
 # %%%%% OpenMPI manual setting - obsolete %%%%%
 #MPI_LIB       := -L$(dir $(shell which mpif90))../lib -lmpi_mpifh -lmpi_cxx -lmpi -lopen-rte -lopen-pal
-#---
 
 MPI_INC       := $(dir $(shell which mpif90))../include
 
@@ -91,7 +83,7 @@ MPI_INC       := $(dir $(shell which mpif90))../include
 
 # %%%%% Architecture %%%%%
 ifndef ARCH
-  ARCH := $(shell uname -s)
+  ARCH := Linux
 endif
 # %%%%% ESMF settings %%%%%
 ESMF_MOD      := -I$(ESMF_DIR)/$(ARCH)/mod
