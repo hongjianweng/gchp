@@ -1257,12 +1257,12 @@ CONTAINS
     ASSERT_(RC==GC_SUCCESS)
 
     ! Pass arrays from State_Diag to MAPL Export
-#if defined( MODEL_GEOS )
-    CALL StateDiag2Export ( am_I_Root, Input_Opt, State_Met, State_Chm, &
-                            State_Diag, Diag_List, HcoState%EXPORT, &
-                            DoChem, DoDryDep, Phase, IM, JM, LM, RC )
-    ASSERT_(RC==GC_SUCCESS)
-#endif
+!#if defined( MODEL_GEOS )
+!    CALL StateDiag2Export ( am_I_Root, Input_Opt, State_Met, State_Chm, &
+!                            State_Diag, Diag_List, HcoState%EXPORT, &
+!                            DoChem, DoDryDep, Phase, IM, JM, LM, RC )
+!    ASSERT_(RC==GC_SUCCESS)
+!#endif
 
     CALL MAPL_TimerOff( STATE, 'GC_DIAGN' )
 !---
