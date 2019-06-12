@@ -180,8 +180,8 @@
 #======================
 # Both GCHP and GEOS-5:
 #======================
-  O3PPMV	                  | ppmv	   | xyz | C |    |   |   |	| ozone_volume_mixing_ratio_in_ppm
-  OX_TEND	                  | kg kg-1 s-1    | xyz | C |    |   |   |	| tendency_of_odd_oxygen_mixing_ratio_due_to_chemistry
+#  O3PPMV	                  | ppmv	   | xyz | C |    |   |   |	| ozone_volume_mixing_ratio_in_ppm
+#  OX_TEND	                  | kg kg-1 s-1    | xyz | C |    |   |   |	| tendency_of_odd_oxygen_mixing_ratio_due_to_chemistry
   H2O_TEND	                  | kg kg-1 s-1    | xyz | C |    |   |   |	| tendency_of_water_vapor_mixing_ratio_due_to_chemistry
   GCCTO3    	                  | dobsons        | xy  |   |    |   |   |	| total_ozone 
   GCCTTO3                         | dobsons        | xy  |   |    |   |   |	| total_tropospheric_ozone 
@@ -196,8 +196,8 @@
 #=============
 # GEOS-5 only:
 #=============
-  OX		                  | mol mol-1      | xyz | C |    |   |   |	| ozone_volume_mixing_ratio
-  O3		                  | kg kg-1	   | xyz | C |    |   |   |	| ozone_mass_mixing_ratio
+#  OX		                  | mol mol-1      | xyz | C |    |   |   |	| ozone_volume_mixing_ratio
+#  O3		                  | kg kg-1	   | xyz | C |    |   |   |	| ozone_mass_mixing_ratio
   SOILNO_PULSE                    | 1              | xy  |   |    |   |   |     | soilnox_pulse 
   LIGHTNING_TOTAL_FLASHRATE       | 1 min-1 km-2   | xy  |   |    |   |   |     | lightning_flashrate
   LIGHTNING_INTRACLOUD_FLASHRATE  | 1 min-1 km-2   | xy  |   |    |   |   |     | lightning_intracloud_flashrate

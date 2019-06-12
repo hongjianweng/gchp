@@ -281,27 +281,27 @@ MODULE GEOSCHEMchem_GridCompMod
 
 ! GEOS-5 only (also in gigc_providerservices but don't use yet):
   ! -RATS:
-  REAL, POINTER     :: CH4     (:,:,:) => NULL()
-  REAL, POINTER     :: N2O     (:,:,:) => NULL()
-  REAL, POINTER     :: CFC11   (:,:,:) => NULL()
-  REAL, POINTER     :: CFC12   (:,:,:) => NULL()
-  REAL, POINTER     :: HCFC22  (:,:,:) => NULL()
+!  REAL, POINTER     :: CH4     (:,:,:) => NULL()
+!  REAL, POINTER     :: N2O     (:,:,:) => NULL()
+!  REAL, POINTER     :: CFC11   (:,:,:) => NULL()
+!  REAL, POINTER     :: CFC12   (:,:,:) => NULL()
+!  REAL, POINTER     :: HCFC22  (:,:,:) => NULL()
 
   ! -Corresponding pointers to internal state. We now use these variables 
   !  instead of the auto-generated pointers (GEOSCHEMCHEM_DeclarePointer___.h) 
   !  to avoid compilation errors if these species are not defined in 
   !  GEOS-Chem (e.g. for specialty sims). 
-  REAL, POINTER     :: PTR_O3      (:,:,:) => NULL()
-  REAL, POINTER     :: PTR_CH4     (:,:,:) => NULL()
-  REAL, POINTER     :: PTR_N2O     (:,:,:) => NULL()
-  REAL, POINTER     :: PTR_CFC11   (:,:,:) => NULL()
-  REAL, POINTER     :: PTR_CFC12   (:,:,:) => NULL()
-  REAL, POINTER     :: PTR_HCFC22  (:,:,:) => NULL()
-  REAL, POINTER     :: PTR_H2O     (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_O3      (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_CH4     (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_N2O     (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_CFC11   (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_CFC12   (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_HCFC22  (:,:,:) => NULL()
+!  REAL, POINTER     :: PTR_H2O     (:,:,:) => NULL()
 
   ! GCCTO3 and GCCTTO3 are the pointers to the corresponding export state fields
-  REAL, POINTER     :: PTR_GCCTO3 (:,:) => NULL()
-  REAL, POINTER     :: PTR_GCCTTO3(:,:) => NULL()
+!  REAL, POINTER     :: PTR_GCCTO3 (:,:) => NULL()
+!  REAL, POINTER     :: PTR_GCCTTO3(:,:) => NULL()
 
   ! Perturb ozone?
   LOGICAL           :: PerturbO3
@@ -574,7 +574,41 @@ CONTAINS
     ! Store internal state with Config object in the gridded component
     CALL ESMF_UserCompSetInternalState( GC, 'GEOSCHEM_State', wrap, STATUS )
     VERIFY_(STATUS)
-  
+
+! new after abstracting to gigc_providerservices_mod, but do not use yet:
+!    CALL Provider_SetServices( MAPL_am_I_Root(), GC, isProvider, __RC__ )
+! GEOS-5 (also in gigc_providerservices but do not use yet):
+
+    ! Check if GEOS-Chem is set as the AERO and/or RATS provider 
+    ! ----------------------------------------------------------
+
+    ! Get configuration
+    CALL ESMF_GridCompGet( GC, CONFIG = CF, __RC__ )
+
+    ! See if GC is the AERO provider
+    DoAERO = .FALSE.
+    CALL ESMF_ConfigGetAttribute( CF, ProviderName,       &
+                                  Label="AERO_PROVIDER:", &
+                                  Default="PCHEM",        &
+                                  __RC__                   )
+    IF ( ProviderName == "GEOSCHEMCHEM" ) DoAERO = .TRUE.
+
+    ! See if GC is the RATS provider
+    DoRATS = .FALSE.
+    CALL ESMF_ConfigGetAttribute( CF, ProviderName,       &
+                                  Label="RATS_PROVIDER:", &
+                                  Default="PCHEM",        &
+                                  __RC__                   )
+    IF ( ProviderName == "GEOSCHEMCHEM" ) DoRATS = .TRUE.
+
+    ! See if GC is the Analysis OX provider
+    DoANOX = .FALSE.
+    CALL ESMF_ConfigGetAttribute( CF, ProviderName,              &
+                                  Label="ANALYSIS_OX_PROVIDER:", &
+                                  Default="PCHEM",               &
+                                  __RC__                          )
+    IF ( ProviderName == "GEOSCHEMCHEM" ) DoANOX = .TRUE. 
+ 
     !=======================================================================
     !                    %%% MAPL Data Services %%%
     !=======================================================================
@@ -839,7 +873,47 @@ CONTAINS
              VLOCATION          = MAPL_VLocationCenter,                    &
                                                   __RC__ )
           if(MAPL_am_I_Root()) write(*,*) 'GCC added to internal: TRC_Cly; Friendly to: DYNAMICS'
+!
+!-- Add OX to the internal state if GEOS-Chem is the analysis OX provider
+!   Make sure it is friendly to ANALYSIS! In GEOS-Chem, OX is diagnosed 
+!   from O3, O3P, and O1D.
+     IF ( DoANOX ) THEN
+        CALL MAPL_AddInternalSpec(GC,                                    &
+           SHORT_NAME         = 'OX',                                    &
+           LONG_NAME          = 'odd_oxygen_volume_mixing_ratio',        &
+           UNITS              = 'mol mol-1',                             &
+           DIMS               = MAPL_DimsHorzVert,                       &
+           FRIENDLYTO         = 'ANALYSIS:DYNAMICS:TURBULENCE:MOIST',    &
+           RESTART            = MAPL_RestartSkip,                        &
+           VLOCATION          = MAPL_VLocationCenter,                    &
+                                                  __RC__ )
+        if(MAPL_am_I_Root()) write(*,*) 'OX added to internal: Friendly to: ANALYSIS, DYNAMICS, TURBULENCE'
 
+        ! Add additional RATs/ANOX exports
+        call MAPL_AddExportSpec(GC,                                  &
+           SHORT_NAME         = 'OX_TEND',                           &
+           LONG_NAME          = 'tendency_of_odd_oxygen_mixing_ratio_due_to_chemistry', &
+           UNITS              = 'mol mol-1 s-1',                     &
+           DIMS               = MAPL_DimsHorzVert,                   &
+           VLOCATION          = MAPL_VLocationCenter,                &
+                                                     __RC__ )
+
+        call MAPL_AddExportSpec(GC,                                  &
+           SHORT_NAME         = 'O3',                                &
+           LONG_NAME          = 'ozone_mass_mixing_ratio',           &
+           UNITS              = 'kg kg-1',                           &
+           DIMS               = MAPL_DimsHorzVert,                   &
+           VLOCATION          = MAPL_VLocationCenter,                &
+                                                     __RC__ )
+
+        call MAPL_AddExportSpec(GC,                                  &
+           SHORT_NAME         = 'O3PPMV',                            &
+           LONG_NAME          = 'ozone_volume_mixing_ratio',         &
+           UNITS              = 'ppmv',                              &
+           DIMS               = MAPL_DimsHorzVert,                   &
+           VLOCATION          = MAPL_VLocationCenter,                &
+                                                 __RC__  )
+     ENDIF
 !
 ! !EXTERNAL STATE:
 !
@@ -1003,39 +1077,6 @@ CONTAINS
     !=======================================================================
     ! Add provider services, if any (AERO, RATS, Analysis Ox)
     !=======================================================================
-! new after abstracting to gigc_providerservices_mod, but do not use yet:
-!    CALL Provider_SetServices( MAPL_am_I_Root(), GC, isProvider, __RC__ )
-! GEOS-5 (also in gigc_providerservices but do not use yet):
-
-    ! Check if GEOS-Chem is set as the AERO and/or RATS provider 
-    ! ----------------------------------------------------------
-
-    ! Get configuration
-    CALL ESMF_GridCompGet( GC, CONFIG = CF, __RC__ )
-
-    ! See if GC is the AERO provider
-    DoAERO = .FALSE.
-    CALL ESMF_ConfigGetAttribute( CF, ProviderName,       &
-                                  Label="AERO_PROVIDER:", &
-                                  Default="PCHEM",        &
-                                  __RC__                   )
-    IF ( ProviderName == "GEOSCHEMCHEM" ) DoAERO = .TRUE.
-    
-    ! See if GC is the RATS provider
-    DoRATS = .FALSE.
-    CALL ESMF_ConfigGetAttribute( CF, ProviderName,       &
-                                  Label="RATS_PROVIDER:", &
-                                  Default="PCHEM",        &
-                                  __RC__                   )
-    IF ( ProviderName == "GEOSCHEMCHEM" ) DoRATS = .TRUE.
-
-    ! See if GC is the Analysis OX provider
-    DoANOX = .FALSE.
-    CALL ESMF_ConfigGetAttribute( CF, ProviderName,              &
-                                  Label="ANALYSIS_OX_PROVIDER:", &
-                                  Default="PCHEM",               &
-                                  __RC__                          )
-    IF ( ProviderName == "GEOSCHEMCHEM" ) DoANOX = .TRUE.
 
     ! Add AERO and AERO_DP bundles to export state if GEOS-Chem is the 
     ! AERO provider
@@ -2307,16 +2348,17 @@ CONTAINS
 
     ENDIF ! DoAERO
 
-    CALL MAPL_GetPointer( INTSTATE, PTR_O3, 'TRC_O3', NotFoundOk=.TRUE., __RC__ )
+! ckeller, 6/12/19: now do during run stage
+!    CALL MAPL_GetPointer( INTSTATE, PTR_O3, 'TRC_O3', NotFoundOk=.TRUE., __RC__ )
 
-    IF ( DoRATS ) THEN
-       CALL MAPL_GetPointer( INTSTATE,    PTR_CH4, 'TRC_CH4',    __RC__ )
-       CALL MAPL_GetPointer( INTSTATE,    PTR_N2O, 'TRC_N2O',    __RC__ )
-       CALL MAPL_GetPointer( INTSTATE,  PTR_CFC11, 'TRC_CFC11',  __RC__ )
-       CALL MAPL_GetPointer( INTSTATE,  PTR_CFC12, 'TRC_CFC12',  __RC__ )
-       CALL MAPL_GetPointer( INTSTATE, PTR_HCFC22, 'TRC_HCFC22', __RC__ )
-       CALL MAPL_GetPointer( INTSTATE,    PTR_H2O, 'TRC_H2O',    __RC__ )
-    ENDIF
+!    IF ( DoRATS ) THEN
+!       CALL MAPL_GetPointer( INTSTATE,    PTR_CH4, 'TRC_CH4',    __RC__ )
+!       CALL MAPL_GetPointer( INTSTATE,    PTR_N2O, 'TRC_N2O',    __RC__ )
+!       CALL MAPL_GetPointer( INTSTATE,  PTR_CFC11, 'TRC_CFC11',  __RC__ )
+!       CALL MAPL_GetPointer( INTSTATE,  PTR_CFC12, 'TRC_CFC12',  __RC__ )
+!       CALL MAPL_GetPointer( INTSTATE, PTR_HCFC22, 'TRC_HCFC22', __RC__ )
+!       CALL MAPL_GetPointer( INTSTATE,    PTR_H2O, 'TRC_H2O',    __RC__ )
+!    ENDIF
 !---
 
     !=======================================================================
@@ -3212,6 +3254,35 @@ CONTAINS
     ! NO2 export
     REAL, POINTER                :: TROPN(:,:), STRATN(:,:)
 
+    ! OX
+    REAL, POINTER                :: OX(:,:,:)
+    REAL, POINTER                :: O3(:,:,:)
+    REAL, POINTER                :: O3PPMV(:,:,:)
+    REAL, POINTER                :: OX_TEND(:,:,:)
+    REAL, POINTER                :: PTR_O3P(:,:,:)
+    REAL, POINTER                :: PTR_O1D(:,:,:)
+    REAL, PARAMETER              :: OMW = 16.0
+
+    ! GEOS-5 only (also in gigc_providerservices but don't use yet):
+    ! -RATS:
+    REAL, POINTER     :: CH4     (:,:,:) => NULL()
+    REAL, POINTER     :: N2O     (:,:,:) => NULL()
+    REAL, POINTER     :: CFC11   (:,:,:) => NULL()
+    REAL, POINTER     :: CFC12   (:,:,:) => NULL()
+    REAL, POINTER     :: HCFC22  (:,:,:) => NULL()
+
+    REAL, POINTER     :: PTR_O3      (:,:,:) => NULL()
+    REAL, POINTER     :: PTR_CH4     (:,:,:) => NULL()
+    REAL, POINTER     :: PTR_N2O     (:,:,:) => NULL()
+    REAL, POINTER     :: PTR_CFC11   (:,:,:) => NULL()
+    REAL, POINTER     :: PTR_CFC12   (:,:,:) => NULL()
+    REAL, POINTER     :: PTR_HCFC22  (:,:,:) => NULL()
+    REAL, POINTER     :: PTR_H2O     (:,:,:) => NULL()
+
+    ! GCCTO3 and GCCTTO3 are the pointers to the corresponding export state fields
+    REAL, POINTER     :: PTR_GCCTO3 (:,:) => NULL()
+    REAL, POINTER     :: PTR_GCCTTO3(:,:) => NULL()
+
     ! Diagnose reaction rates
     INTEGER                     :: NDIAG
     INTEGER                     :: RRids(NREACT)
@@ -3308,6 +3379,7 @@ CONTAINS
 ! GCHP uses a different name:
 !#      include "GIGCchem_GetPointer___.h"
 !---
+    ENDIF
 
 ! GCHP only:
 !       !IF ( IsCTM ) THEN
@@ -3316,44 +3388,53 @@ CONTAINS
 !       !ENDIF
 !---
 
+    ! Eventually get pointers to GCCTO3 and GCCTTO3. Those fields are optional
+    ! and are only filled if defined and required.
+    CALL MAPL_GetPointer ( EXPORT, PTR_GCCTO3,   'GCCTO3', notFoundOK=.TRUE., __RC__ )
+    CALL MAPL_GetPointer ( EXPORT, PTR_GCCTTO3, 'GCCTTO3', notFoundOK=.TRUE., __RC__ )
+!---
+
+! GCHP ends the (if FIRST) block and then links HEMCO state to GC objects:
+!    ENDIF
+
+    CALL MAPL_GetPointer( INTSTATE, PTR_O3, 'TRC_O3', NotFoundOk=.TRUE., __RC__ )
+!---
+
 ! new code for gigc_providerservices_mod but do not use yet:
 !       ! Set up pointers if GEOS-Chem is a provider
 !       !IF ( isProvider ) THEN
 !       CALL Provider_SetPointers( am_I_Root, EXPORT, calcOzone, __RC__ )
 !       !ENDIF
 ! GEOS-5 (also in gigc_providerservices_mod but do not use yet):
-       ! Get pointers to analysis OX exports
-       IF ( DoANOX ) THEN
-          CALL MAPL_GetPointer ( EXPORT, OX_TEND, 'OX_TEND' , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,      OX, 'OX'      , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,      O3, 'O3'      , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,  O3PPMV, 'O3PPMV'  , __RC__ )
-       ENDIF
+    ! Get pointers to analysis OX exports
+    IF ( DoANOX ) THEN
+       CALL MAPL_GetPointer ( INTERNAL,    OX, 'OX'      , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT, OX_TEND, 'OX_TEND' , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,      O3, 'O3'      , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,  O3PPMV, 'O3PPMV'  , __RC__ )
+    ENDIF
 
-       ! Get pointers to RATS exports
-       IF ( DoRATS) THEN
-          CALL MAPL_GetPointer ( EXPORT, H2O_TEND, 'H2O_TEND' , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,      CH4, 'CH4'      , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,      N2O, 'N2O'      , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,    CFC11, 'CFC11'    , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,    CFC12, 'CFC12'    , __RC__ )
-          CALL MAPL_GetPointer ( EXPORT,   HCFC22, 'HCFC22'   , __RC__ )
-       ENDIF
+    ! Get pointers to RATS exports
+    IF ( DoRATS) THEN
+       CALL MAPL_GetPointer ( EXPORT, H2O_TEND, 'H2O_TEND' , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,      CH4, 'CH4'      , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,      N2O, 'N2O'      , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,    CFC11, 'CFC11'    , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,    CFC12, 'CFC12'    , __RC__ )
+       CALL MAPL_GetPointer ( EXPORT,   HCFC22, 'HCFC22'   , __RC__ )
+       CALL MAPL_GetPointer( INTSTATE,    PTR_CH4, 'TRC_CH4',    __RC__ )
+       CALL MAPL_GetPointer( INTSTATE,    PTR_N2O, 'TRC_N2O',    __RC__ )
+       CALL MAPL_GetPointer( INTSTATE,  PTR_CFC11, 'TRC_CFC11',  __RC__ )
+       CALL MAPL_GetPointer( INTSTATE,  PTR_CFC12, 'TRC_CFC12',  __RC__ )
+       CALL MAPL_GetPointer( INTSTATE, PTR_HCFC22, 'TRC_HCFC22', __RC__ )
+       CALL MAPL_GetPointer( INTSTATE,    PTR_H2O, 'TRC_H2O',    __RC__ )
+    ENDIF
 
-       ! Eventually get pointers to GCCTO3 and GCCTTO3. Those fields are optional
-       ! and are only filled if defined and required.
-       CALL MAPL_GetPointer ( EXPORT, PTR_GCCTO3,   'GCCTO3', notFoundOK=.TRUE., __RC__ )
-       CALL MAPL_GetPointer ( EXPORT, PTR_GCCTTO3, 'GCCTTO3', notFoundOK=.TRUE., __RC__ )
-!---
-
-! GCHP ends the (if FIRST) block and then links HEMCO state to GC objects:
-   ENDIF
-
-       ! Link HEMCO state to gridcomp objects
-       ASSERT_(ASSOCIATED(HcoState))
-       HcoState%GRIDCOMP => GC
-       HcoState%IMPORT   => IMPORT
-       HcoState%EXPORT   => EXPORT
+    ! Link HEMCO state to gridcomp objects
+    ASSERT_(ASSOCIATED(HcoState))
+    HcoState%GRIDCOMP => GC
+    HcoState%IMPORT   => IMPORT
+    HcoState%EXPORT   => EXPORT
 ! GCHP does this outside of the (if FIRST) block and has archived conv flds:
 !
 !       ! Pass IMPORT/EXPORT object to HEMCO state object
@@ -4241,23 +4322,6 @@ CONTAINS
 !                                  STATE,     Input_Opt, GC,  EXPORT,   &
 !                                  __RC__ )
 !    ENDIF
-! GEOS-5 (also in gigc_providerservices_mod Provider_FillBundles, but
-! might not be in the right place anymore):
-    !=======================================================================
-    ! Fill ozone export states if GC is the analysis OX provider:
-    !      OX: volume mixing ratio
-    !      O3: mass mixing ratio
-    !  O3PPMV: volume mixing ratio in ppm
-    ! OX_TEND: mol mol-1 s-1
-    !
-    ! GEOS-Chem tracer:
-    ! PTR_O3: kg kg-1 total air
-    !=======================================================================
-    IF ( ASSOCIATED(O3     ) ) O3      = PTR_O3 
-    IF ( ASSOCIATED(OX     ) ) OX      = PTR_O3 * MAPL_AIRMW / MAPL_O3MW
-    IF ( ASSOCIATED(O3PPMV ) ) O3PPMV  = PTR_O3 * MAPL_AIRMW / MAPL_O3MW   &
-                                                 * 1.00E+06
-!---
 
 ! GEOS-5 only (move to gigc_providerservices_mod?):
     !=======================================================================
@@ -4335,18 +4399,47 @@ CONTAINS
                            State_Diag, IMPORT, EXPORT, IntState, Q, PLE, TROPP, __RC__ )
 !---
 
+! GEOS-5 (also in gigc_providerservices_mod Provider_FillBundles, but
+! might not be in the right place anymore):
+    !=======================================================================
+    ! Fill ozone export states if GC is the analysis OX provider:
+    !      OX: volume mixing ratio
+    !      O3: mass mixing ratio
+    !  O3PPMV: volume mixing ratio in ppm
+    ! OX_TEND: mol mol-1 s-1
+    !
+    ! GEOS-Chem tracer:
+    ! PTR_O3: kg kg-1 total air
+    !=======================================================================
+    IF ( DoANOX ) THEN
+       ASSERT_(ASSOCIATED(PTR_O3))
+       IF ( ASSOCIATED(O3     ) ) O3      = PTR_O3
+       IF ( ASSOCIATED(O3PPMV ) ) O3PPMV  = PTR_O3  * MAPL_AIRMW / MAPL_O3MW  &
+                                          * 1.00E+06
+       IF ( ASSOCIATED(OX) ) THEN
+          CALL MAPL_GetPointer( INTSTATE, PTR_O3P, 'SPC_O'  , __RC__ )
+          CALL MAPL_GetPointer( INTSTATE, PTR_O1D, 'SPC_O1D', __RC__ )
+          OX =        PTR_O3  * MAPL_AIRMW / MAPL_O3MW
+          OX = OX + ( PTR_O3P * MAPL_AIRMW / OMW )
+          OX = OX + ( PTR_O1D * MAPL_AIRMW / OMW )
+       ENDIF
+    ENDIF
+!---
+
 ! GEOS-5 (also in gigc_providerservices_mod routine Provider_FillBundles, but 
 ! might not be in the right place anymore):
     !=======================================================================
     ! Fill RATS export states if GC is the RATS provider
     ! The tracer concentrations of the RATS export states are in mol mol-1.
     !=======================================================================
-    IF ( ASSOCIATED(CH4   ) )    CH4 = PTR_CH4    * MAPL_AIRMW /  16.00
-    IF ( ASSOCIATED(N2O   ) )    N2O = PTR_N2O    * MAPL_AIRMW /  44.00
-    IF ( ASSOCIATED(CFC11 ) )  CFC11 = PTR_CFC11  * MAPL_AIRMW / 137.37
-    IF ( ASSOCIATED(CFC12 ) )  CFC12 = PTR_CFC12  * MAPL_AIRMW / 120.91
-    IF ( ASSOCIATED(HCFC22) ) HCFC22 = PTR_HCFC22 * MAPL_AIRMW /  86.47
- 
+    IF ( DoRATS) THEN
+       IF ( ASSOCIATED(CH4   ) )    CH4 = PTR_CH4    * MAPL_AIRMW /  16.00
+       IF ( ASSOCIATED(N2O   ) )    N2O = PTR_N2O    * MAPL_AIRMW /  44.00
+       IF ( ASSOCIATED(CFC11 ) )  CFC11 = PTR_CFC11  * MAPL_AIRMW / 137.37
+       IF ( ASSOCIATED(CFC12 ) )  CFC12 = PTR_CFC12  * MAPL_AIRMW / 120.91
+       IF ( ASSOCIATED(HCFC22) ) HCFC22 = PTR_HCFC22 * MAPL_AIRMW /  86.47
+    ENDIF 
+
     !=======================================================================
     ! Fill AERO bundle if GEOS-Chem is the AERO provider.
     ! For every field of the AERO bundle, we will copy the corresponding
@@ -4821,25 +4914,25 @@ CONTAINS
 
 ! GEOS-5 only (moved to Provider_Finalize in GCHP):
     ! Free local pointers
-    O3               => NULL()
-    O3PPMV           => NULL()
-    OX               => NULL()
-    OX_TEND          => NULL()
-    CH4              => NULL()
-    N2O              => NULL()
-    CFC11            => NULL()
-    CFC12            => NULL()
-    HCFC22           => NULL()
-    H2O_TEND         => NULL()
-    PTR_O3           => NULL()
-    PTR_CH4          => NULL()
-    PTR_N2O          => NULL()
-    PTR_CFC11        => NULL()
-    PTR_CFC12        => NULL()
-    PTR_HCFC22       => NULL()
-    PTR_H2O          => NULL()
-    PTR_GCCTO3       => NULL()
-    PTR_GCCTTO3      => NULL()
+    !O3               => NULL()
+    !O3PPMV           => NULL()
+    !OX               => NULL()
+    !OX_TEND          => NULL()
+    !CH4              => NULL()
+    !N2O              => NULL()
+    !CFC11            => NULL()
+    !CFC12            => NULL()
+    !HCFC22           => NULL()
+    !H2O_TEND         => NULL()
+    !PTR_O3           => NULL()
+    !PTR_CH4          => NULL()
+    !PTR_N2O          => NULL()
+    !PTR_CFC11        => NULL()
+    !PTR_CFC12        => NULL()
+    !PTR_HCFC22       => NULL()
+    !PTR_H2O          => NULL()
+    !PTR_GCCTO3       => NULL()
+    !PTR_GCCTTO3      => NULL()
 ! GCHP uses this:
 !    ! Deallocate provide pointers and arrays
 !    CALL Provider_Finalize( am_I_Root, __RC__ )
