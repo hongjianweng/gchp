@@ -844,6 +844,15 @@ CONTAINS
 !               RESTART            = restartAttr,    &
 !               RC                 = STATUS  )
 !---
+             ! Also add an export as dry air
+             CALL MAPL_AddExportSpec(GC,                              &
+                SHORT_NAME         = TRIM(SpcName)//'dry',          &
+                LONG_NAME          = TRIM(FullName)//                 &
+                                     ' volume mixing ratio dry air',  &
+                UNITS              = 'mol mol-1',                     &
+                DIMS               = MAPL_DimsHorzVert,               &
+                VLOCATION          = MAPL_VLocationCenter,            &
+                                                                __RC__ )
           Endif
        ENDDO
     ENDIF
@@ -6653,14 +6662,15 @@ CONTAINS
                               '  because MW is unknown: ', TRIM(SpcName)
                 ENDIF
              ENDIF
-             ! Get species and set MW to arbitrary number of 1
+             ! Get species and set MW to 1.0. This is ok because the internal
+             ! state uses a MW of 1.0 for all species
              FieldName = 'SPC_'//TRIM(SpcName)
              MW = 1.0
-             IF ( ASSOCIATED(Ptr3D) .AND. am_I_Root .AND. FIRST ) THEN
-                write(*,*)    &
-                   'WARNING: Attempt conversion of kg/kg total'// &
-                   ' to v/v dry but MW is unknown: ', TRIM(SpcName)
-             ENDIF
+             !IF ( ASSOCIATED(Ptr3D) .AND. am_I_Root .AND. FIRST ) THEN
+             !   write(*,*)    &
+             !      'WARNING: Attempt conversion of kg/kg total'// &
+             !      ' to v/v dry but MW is unknown: ', TRIM(SpcName)
+             !ENDIF
           ENDIF
           CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, __RC__ )
 
