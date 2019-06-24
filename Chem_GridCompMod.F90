@@ -6653,6 +6653,10 @@ CONTAINS
           IF ( MW > 0.0 ) THEN
              FieldName = 'TRC_'//TRIM(SpcName)
           ELSE
+             ! Get species and set MW to 1.0. This is ok because the internal
+             ! state uses a MW of 1.0 for all species
+             FieldName = 'SPC_'//TRIM(SpcName)
+             MW = 1.0
              ! Cannot add to NOy if MW is unknown because it would screw up 
              ! unit conversion
              IF ( IsNOy ) THEN
@@ -6662,17 +6666,27 @@ CONTAINS
                               '  because MW is unknown: ', TRIM(SpcName)
                 ENDIF
              ENDIF
-             ! Get species and set MW to 1.0. This is ok because the internal
-             ! state uses a MW of 1.0 for all species
-             FieldName = 'SPC_'//TRIM(SpcName)
-             MW = 1.0
              !IF ( ASSOCIATED(Ptr3D) .AND. am_I_Root .AND. FIRST ) THEN
              !   write(*,*)    &
              !      'WARNING: Attempt conversion of kg/kg total'// &
              !      ' to v/v dry but MW is unknown: ', TRIM(SpcName)
              !ENDIF
           ENDIF
-          CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, __RC__ )
+          CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, NotFoundOK=.TRUE., RC=STATUS )
+          ! On first fail try field with other prefix
+          !IF ( STATUS /= ESMF_SUCCESS ) THEN
+          IF ( .NOT. ASSOCIATED(PtrTmp) ) THEN
+             IF ( FieldName(1:4)=='TRC_' ) THEN
+                FieldName = 'SPC_'//TRIM(SpcName)
+             ELSE
+                FieldName = 'TRC_'//TRIM(SpcName)
+             ENDIF
+             CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, RC=STATUS )
+             IF ( STATUS /= ESMF_SUCCESS ) THEN
+                WRITE(*,*) 'Error reading ',TRIM(SpcName)
+                VERIFY_(STATUS)
+             ENDIF
+          ENDIF
 
           !====================================================================
           ! Export in v/v
