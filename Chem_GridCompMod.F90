@@ -7023,7 +7023,7 @@ CONTAINS
     CHARACTER(LEN=ESMF_MAXSTR) :: Iam, compName ! Gridded component name
     CHARACTER(LEN=ESMF_MAXSTR) :: FldName
     CHARACTER(LEN=ESMF_MAXSTR) :: SpcName
-    CHARACTER(LEN=ESMF_MAXSTR) :: ifile
+    CHARACTER(LEN=255)         :: ifile
     TYPE(MAPL_SimpleBundle)    :: VarBundle
     TYPE(ESMF_Grid)            :: grid
     TYPE(ESMF_TIME)            :: time
@@ -7048,7 +7048,7 @@ CONTAINS
 
     ! Read GMI file
     CHARACTER(LEN=ESMF_MAXSTR) :: GmiFldName
-    CHARACTER(LEN=ESMF_MAXSTR) :: Gmiifile
+    CHARACTER(LEN=255)         :: Gmiifile
     TYPE(MAPL_SimpleBundle)    :: GmiVarBundle
     TYPE(ESMF_TIME)            :: Gmitime
     LOGICAL                    :: GmiFileExists
@@ -7132,7 +7132,7 @@ CONTAINS
     ENDIF
 
     ! Get time stamp on file
-    call GFIO_Open( ifile, 1, fid, STATUS )
+    call GFIO_Open( TRIM(ifile), 1, fid, STATUS )
     ASSERT_(STATUS==0)
     call GetBegDateTime ( fid, nymd, nhms, incSecs, STATUS )
     ASSERT_(STATUS==0)
