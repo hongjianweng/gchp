@@ -211,14 +211,14 @@
   CONV_CLDTOP                     | 1              | xy  |   |    |   |   |     | Convective_cloud_top
   O3_MASS                         | kg m-2         | xyz | C |    |   |   |     | O3_grid_cell_mass_per_area 
   OH_reactivity                   | s-1            | xyz | C |    |   |   |     | Total_OH_loss_rate
-  PM25                            | ug m-3         | xyz | C |    |   |   |     | Particulate_matter_with_diameter_below_2.5_um_RH_35 
-  PM25ni                          | ug m-3         | xyz | C |    |   |   |     | Nitrate_particulate_matter_with_diameter_below_2.5_um_RH_35
-  PM25su                          | ug m-3         | xyz | C |    |   |   |     | Sulfate_particulate_matter_with_diameter_below_2.5_um_RH_35
-  PM25ss                          | ug m-3         | xyz | C |    |   |   |     | Seasalt_particulate_matter_with_diameter_below_2.5_um_RH_35
-  PM25du                          | ug m-3         | xyz | C |    |   |   |     | Dust_particulate_matter_with_diameter_below_2.5_um_RH_35
-  PM25bc                          | ug m-3         | xyz | C |    |   |   |     | Black_carbon_particulate_matter_with_diameter_below_2.5_um_RH_35
-  PM25oc                          | ug m-3         | xyz | C |    |   |   |     | Organic_carbon_particulate_matter_with_diameter_below_2.5_um_RH_35
-  PM25soa                         | ug m-3         | xyz | C |    |   |   |     | Secondary_organic_aerosol_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25                            | ug m-3         | xyz | C |    |   |   |     | Particulate_matter_with_diameter_below_2.5_um_RH_35 
+#  PM25ni                          | ug m-3         | xyz | C |    |   |   |     | Nitrate_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25su                          | ug m-3         | xyz | C |    |   |   |     | Sulfate_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25ss                          | ug m-3         | xyz | C |    |   |   |     | Seasalt_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25du                          | ug m-3         | xyz | C |    |   |   |     | Dust_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25bc                          | ug m-3         | xyz | C |    |   |   |     | Black_carbon_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25oc                          | ug m-3         | xyz | C |    |   |   |     | Organic_carbon_particulate_matter_with_diameter_below_2.5_um_RH_35
+#  PM25soa                         | ug m-3         | xyz | C |    |   |   |     | Secondary_organic_aerosol_particulate_matter_with_diameter_below_2.5_um_RH_35
   AOD550_CLOUD                    | 1              | xy  |   |    |   |   |     | Cloud_optical_depth
   AOD550_DUST                     | 1              | xy  |   |    |   |   |     | Dust_optical_depth_at_550nm
   AOD550_SULFATE                  | 1              | xy  |   |    |   |   |     | Sulfate_optical_depth_at_550nm
