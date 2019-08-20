@@ -126,6 +126,8 @@ MODULE GEOSCHEMchem_GridCompMod
   TYPE(MetState)                   :: State_Met      ! Meteorology state
   TYPE(ChmState)                   :: State_Chm      ! Chemistry state
   TYPE(DgnState)                   :: State_Diag     ! Diagnostics state 
+! GEOS-5 only:
+!  TYPE(DgnList)                    :: Diag_List      ! Diagnostics list
 ! GCHP only:
 !  TYPE(Species),          POINTER  :: ThisSpc => NULL()
 !---
@@ -845,14 +847,14 @@ CONTAINS
 !               RC                 = STATUS  )
 !---
              ! Also add an export as dry air
-             CALL MAPL_AddExportSpec(GC,                              &
-                SHORT_NAME         = TRIM(SpcName)//'dry',          &
-                LONG_NAME          = TRIM(FullName)//                 &
-                                     ' volume mixing ratio dry air',  &
-                UNITS              = 'mol mol-1',                     &
-                DIMS               = MAPL_DimsHorzVert,               &
-                VLOCATION          = MAPL_VLocationCenter,            &
-                                                                __RC__ )
+             CALL MAPL_AddExportSpec(GC,                               &
+                SHORT_NAME         = TRIM(GPFX)//TRIM(SpcName)//'dry', &
+                LONG_NAME          = TRIM(FullName)//                  &
+                                     ' volume mixing ratio dry air',   &
+                UNITS              = 'mol mol-1',                      &
+                DIMS               = MAPL_DimsHorzVert,                &
+                VLOCATION          = MAPL_VLocationCenter,             &
+                                                                 __RC__ )
           Endif
        ENDDO
     ENDIF
@@ -1002,7 +1004,7 @@ CONTAINS
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'WetLossTot_'//TRIM(AdvSpc(I)),                & 
           LONG_NAME          = TRIM(FullName)//' vertical integrated loss'//  &
-                               '_due_to_wet_scavenging',                      &
+                               ' due to wet scavenging',                      &
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -1033,7 +1035,7 @@ CONTAINS
 
        ! Also create export field in v/v dry air
        CALL MAPL_AddExportSpec(GC,                                            &
-          SHORT_NAME         = TRIM(AdvSpc(I))//'dry',                        & 
+          SHORT_NAME         = TRIM(GPFX)//TRIM(AdvSpc(I))//'dry',            & 
           LONG_NAME          = TRIM(FullName)//                               &
                                ' volume mixing ratio dry air',                &
           UNITS              = 'mol mol-1',                                   &
@@ -1068,14 +1070,14 @@ CONTAINS
        IF ( .NOT. Found ) FullName = TRIM(SpcName)
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'TOTCOL_'//TRIM(SpcName),                      & 
-          LONG_NAME          = TRIM(FullName)//' total column density',        &
+          LONG_NAME          = TRIM(FullName)//'_total_column_density',        &
           UNITS              = '1.0e15 molec cm-2',                           &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
                                                                      __RC__ )
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'TROPCOL_'//TRIM(SpcName),                     & 
-          LONG_NAME          = TRIM(FullName)//' tropospheric column density', &
+          LONG_NAME          = TRIM(FullName)//'_tropospheric_column_density', &
           UNITS              = '1.0e15 molec cm-2',                           &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -1098,7 +1100,7 @@ CONTAINS
        ! Fields are added to bundle in the initialize routine.
        call MAPL_AddExportSpec(GC,                                  &
           SHORT_NAME         = 'AERO',                              &
-          LONG_NAME          = 'aerosol_mass_mixing_ratios',        &
+          LONG_NAME          = 'Aerosol_mass_mixing_ratios',        &
           UNITS              = 'kg kg-1',                           &
           DIMS               = MAPL_DimsHorzVert,                   &
           VLOCATION          = MAPL_VLocationCenter,                &
@@ -1108,7 +1110,7 @@ CONTAINS
        ! At the moment, it is not filled by GEOS-Chem.
        call MAPL_AddExportSpec(GC,                                  &
           SHORT_NAME         = 'AERO_DP',                           &
-          LONG_NAME          = 'aerosol_deposition',                &
+          LONG_NAME          = 'Aerosol_deposition',                &
           UNITS              = 'kg m-2 s-1',                        &
           DIMS               = MAPL_DimsHorzOnly,                   &
           DATATYPE           = MAPL_BundleItem,                     &
@@ -1117,7 +1119,7 @@ CONTAINS
        ! Fields of AERO_DP bundle:
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUDP_DST1',                &
-          LONG_NAME          = 'dust1_dry_depostion',      &
+          LONG_NAME          = 'Dust1_dry_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1125,7 +1127,7 @@ CONTAINS
  
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUDP_DST2',                &
-          LONG_NAME          = 'dust2_dry_depostion',      &
+          LONG_NAME          = 'Dust2_dry_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1133,7 +1135,7 @@ CONTAINS
   
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUDP_DST3',                &
-          LONG_NAME          = 'dust3_dry_depostion',      &
+          LONG_NAME          = 'Dust3_dry_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1141,7 +1143,7 @@ CONTAINS
   
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUDP_DST4',                &
-          LONG_NAME          = 'dust4_dry_depostion',      &
+          LONG_NAME          = 'Dust4_dry_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1149,7 +1151,7 @@ CONTAINS
  
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUWT_DST1',                &
-          LONG_NAME          = 'dust1_wet_depostion',      &
+          LONG_NAME          = 'Dust1_wet_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1157,7 +1159,7 @@ CONTAINS
  
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUWT_DST2',                &
-          LONG_NAME          = 'dust2_wet_depostion',      &
+          LONG_NAME          = 'Dust2_wet_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1165,7 +1167,7 @@ CONTAINS
   
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUWT_DST3',                &
-          LONG_NAME          = 'dust3_wet_depostion',      &
+          LONG_NAME          = 'Dust3_wet_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1173,7 +1175,7 @@ CONTAINS
   
        call MAPL_AddExportSpec(GC,                         &
           SHORT_NAME         = 'DUWT_DST4',                &
-          LONG_NAME          = 'dust4_wet_depostion',      &
+          LONG_NAME          = 'Dust4_wet_depostion',      &
           UNITS              = 'kg m-2 s-1',               &
           DIMS               = MAPL_DimsHorzOnly,          &
           VLOCATION          = MAPL_VLocationNone,         &
@@ -1379,7 +1381,7 @@ CONTAINS
 
        call MAPL_AddExportSpec(GC,                                &
           SHORT_NAME         = 'N2O',                               &
-          LONG_NAME          = 'nitrous_oxide_volume_mixing_ratio', &
+          LONG_NAME          = 'Nitrous_oxide_volume_mixing_ratio', &
           UNITS              = 'mol mol-1',                         &
           DIMS               = MAPL_DimsHorzVert,                   &
           VLOCATION          = MAPL_VLocationCenter,                &
@@ -1411,7 +1413,7 @@ CONTAINS
     
        call MAPL_AddExportSpec(GC,                                &
           SHORT_NAME         = 'CH4',                               &
-          LONG_NAME          = 'methane_volume_mixing_ratio',       &
+          LONG_NAME          = 'Methane_volume_mixing_ratio',       &
           UNITS              = 'mol mol-1',                         &
           DIMS               = MAPL_DimsHorzVert,                   &
           VLOCATION          = MAPL_VLocationCenter,                &
@@ -2113,6 +2115,7 @@ CONTAINS
                           State_Diag= State_Diag, & ! Diagnostics State obj
 ! GEOS-5 only:
                           value_LLSTRAT = value_LLSTRAT,    & ! # strat. levels 
+!                          Diag_List = Diag_List,  & ! Diagnostics list                          
                           HcoConfig = HcoConfig,  & ! HEMCO config obj 
 !---
                           HistoryConfig = HistoryConfig, & ! History Config Obj
@@ -4173,6 +4176,7 @@ CONTAINS
                                   State_Chm  = State_Chm,  & ! Chemistry State
                                   State_Met  = State_Met,  & ! Meteorology State
                                   State_Diag = State_Diag, & ! Diagnostics State
+!                                  Diag_List  = Diag_List,  & ! Diagnostics list 
                                   Phase      = Phase,      & ! Run phase
                                   IsChemTime = IsChemTime, & ! Time for chem?
 ! GEOS-5 only:
@@ -4914,6 +4918,7 @@ CONTAINS
                            State_Met = State_Met,  &   ! Meteorology State
 ! GEOS-5 only (I think this is an oversight for GCHP):
                            State_Diag = State_Diag, &   ! Diagnostics State
+!                           Diag_List  = Diag_List,  &   ! Diagnostics List 
 !---
                            __RC__                 )
 
@@ -6511,7 +6516,7 @@ CONTAINS
 !               SpcName(1:3) == 'PT1' .OR.  &
 !               SpcName(1:3) == 'PT2'        ) CYCLE
 !       ENDIF
-       FieldName = TRIM(SpcName)//'dry' ! FieldName
+       FieldName = TRIM(GPFX)//TRIM(SpcName)//'dry' ! FieldName
 
        ! See if field exists in export
        CALL MAPL_GetPointer( EXPORT, Ptr3D, FieldName, &
