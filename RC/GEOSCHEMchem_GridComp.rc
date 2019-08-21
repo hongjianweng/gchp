@@ -162,3 +162,10 @@ ANAO3L3: 72
 ANAO3L4: 72
 ANAO3FR: 0.2
 Use_PCHEM_O3: 0
+
+# Turn off heterogenous reactions in stratosphere?
+# If true, the following heterogeneous reactions are disabled (in the stratosphere):
+# ClNO3(g) + HBr(l,s) --> BrCl + HNO3
+# BrNO3(g) + HCl(l,s) --> BrCl + HNO3
+# HOCl(g) + HBr(l,s) --> BrCl + H2O
+TurnOffHetRates: 0

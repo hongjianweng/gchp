@@ -2012,6 +2012,13 @@ CONTAINS
     IF ( am_I_Root ) THEN
        WRITE(*,*) 'Stop KPP if integration fails: ',Input_Opt%KppStop
     ENDIF
+
+    ! Turn off three heterogenous reactions in stratosphere 
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Default = 0, Label = "TurnOffHetRates:", __RC__ )
+    Input_Opt%TurnOffHetRates = ( DoIt == 1 )
+    IF ( am_I_Root ) THEN
+       WRITE(*,*) 'Disable selected het. reactions in stratosphere: ',Input_Opt%TurnOffHetRates
+    ENDIF
 #endif
 
     !=======================================================================
