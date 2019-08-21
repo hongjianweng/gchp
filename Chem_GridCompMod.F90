@@ -501,7 +501,7 @@ CONTAINS
     INTEGER                       :: JJ, NUNIT
     CHARACTER(LEN=255)            :: MYFRIENDLIES
     CHARACTER(LEN=31)             :: iName
-    CHARACTER(LEN=80)             :: FullName, Formula 
+    CHARACTER(LEN=127)            :: FullName, Formula 
     LOGICAL                       :: FriendDyn, FriendTurb
 #endif
 
