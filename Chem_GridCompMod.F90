@@ -828,6 +828,16 @@ CONTAINS
              ! verbose
              if(MAPL_am_I_Root()) write(*,*)  &
                        'GCC added to internal: '//TRIM(SPFX)//TRIM(SpcName)
+
+             ! Also add an export as dry air
+             CALL MAPL_AddExportSpec(GC,                               &
+                SHORT_NAME         = TRIM(GPFX)//TRIM(SpcName)//'dry', &
+                LONG_NAME          = TRIM(FullName)//                  &
+                                     ' volume mixing ratio dry air',   &
+                UNITS              = 'mol mol-1',                      &
+                DIMS               = MAPL_DimsHorzVert,                &
+                VLOCATION          = MAPL_VLocationCenter,             &
+                                                                 __RC__ )
 #else
           IF (Found .neqv. .true.) Then
           call MAPL_AddInternalSpec(GC, &
@@ -1015,7 +1025,7 @@ CONTAINS
 
        ! Also create export field in v/v dry air
        CALL MAPL_AddExportSpec(GC,                                            &
-          SHORT_NAME         = TRIM(AdvSpc(I))//'dry',                        & 
+          SHORT_NAME         = TRIM(GPFX)//TRIM(AdvSpc(I))//'dry',            & 
           LONG_NAME          = TRIM(FullName)//                               &
                                ' volume mixing ratio dry air',                &
           UNITS              = 'mol mol-1',                                   &
@@ -6403,7 +6413,7 @@ CONTAINS
 !               SpcName(1:3) == 'PT1' .OR.  &
 !               SpcName(1:3) == 'PT2'        ) CYCLE
 !       ENDIF
-       FieldName = TRIM(SpcName)//'dry' ! FieldName
+       FieldName = TRIM(GPFX)//TRIM(SpcName)//'dry' ! FieldName
 
        ! See if field exists in export
        CALL MAPL_GetPointer( EXPORT, Ptr3D, FieldName, &
@@ -6484,6 +6494,10 @@ CONTAINS
           IF ( MW > 0.0 ) THEN
              FieldName = 'TRC_'//TRIM(SpcName)
           ELSE
+             ! Get species and set MW to 1.0. This is ok because the internal
+             ! state uses a MW of 1.0 for all species
+             FieldName = 'SPC_'//TRIM(SpcName)
+             MW = 1.0
              ! Cannot add to NOy if MW is unknown because it would screw up 
              ! unit conversion
              IF ( IsNOy ) THEN
@@ -6493,16 +6507,27 @@ CONTAINS
                               '  because MW is unknown: ', TRIM(SpcName)
                 ENDIF
              ENDIF
-             ! Get species and set MW to arbitrary number of 1
-             FieldName = 'SPC_'//TRIM(SpcName)
-             MW = 1.0
-             IF ( ASSOCIATED(Ptr3D) .AND. am_I_Root .AND. FIRST ) THEN
-                write(*,*)    &
-                   'WARNING: Attempt conversion of kg/kg total'// &
-                   ' to v/v dry but MW is unknown: ', TRIM(SpcName)
+             !IF ( ASSOCIATED(Ptr3D) .AND. am_I_Root .AND. FIRST ) THEN
+             !   write(*,*)    &
+             !      'WARNING: Attempt conversion of kg/kg total'// &
+             !      ' to v/v dry but MW is unknown: ', TRIM(SpcName)
+             !ENDIF
+          ENDIF
+          CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, NotFoundOK=.TRUE., RC=STATUS )
+          ! On first fail try field with other prefix
+          !IF ( STATUS /= ESMF_SUCCESS ) THEN
+          IF ( .NOT. ASSOCIATED(PtrTmp) ) THEN
+             IF ( FieldName(1:4)=='TRC_' ) THEN
+                FieldName = 'SPC_'//TRIM(SpcName)
+             ELSE
+                FieldName = 'TRC_'//TRIM(SpcName)
+             ENDIF
+             CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, RC=STATUS )
+             IF ( STATUS /= ESMF_SUCCESS ) THEN
+                WRITE(*,*) 'Error reading ',TRIM(SpcName)
+                VERIFY_(STATUS)
              ENDIF
           ENDIF
-          CALL MAPL_GetPointer( INTSTATE, PtrTmp, FieldName, __RC__ )
 
           !====================================================================
           ! Export in v/v

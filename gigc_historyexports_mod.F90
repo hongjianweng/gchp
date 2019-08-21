@@ -108,11 +108,13 @@ MODULE GIGC_HistoryExports_Mod
   ! Prefix of the species names in the internal state and HISTORY.rc
   CHARACTER(LEN=4), PUBLIC, PARAMETER  :: TPFX = 'TRC_'
   CHARACTER(LEN=4), PUBLIC, PARAMETER  :: SPFX = 'SPC_'
+  CHARACTER(LEN=4), PUBLIC, PARAMETER  :: GPFX = 'GCD_'
 !
 ! !REVISION HISTORY:
 !  01 Sep 2017 - E. Lundgren - Initial version
 !  08 Mar 2018 - E. Lundgren - Define the internal state prefix expected in 
 !                              HISTORY.rc within this module
+!  19 Aug 2019 - C. Keller   - Added GEOS-5 diagnostics prefix GPFX
 !EOP
 !------------------------------------------------------------------------------
 !BOC
@@ -242,6 +244,12 @@ CONTAINS
        !       They should be added here to avoid errors during output.
        IF ( ( INDEX( current%name,  TRIM(TPFX) ) > 0 ) .OR.   &
             ( INDEX( current%name,  TRIM(SPFX) ) > 0 ) ) THEN
+          current => current%next
+          CYCLE
+       ENDIF
+
+       ! Also skip GEOS5 diagnostics. Will need to revisit this 
+       IF ( INDEX( current%name,  TRIM(GPFX) ) == 1 ) THEN
           current => current%next
           CYCLE
        ENDIF
