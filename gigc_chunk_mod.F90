@@ -1041,9 +1041,10 @@ CONTAINS
 
 ! ewl: this was in the old file. Still need? Ends with -----
 ! GEOS-5 only (diagnostics):
+! cak: this is now done in CopyGCStates2Exports
     ! Write HEMCO diagnostics 
-    CALL HCOI_GC_WriteDiagn( am_I_Root, Input_Opt, .FALSE., RC )
-    ASSERT_(RC==GC_SUCCESS)
+!    CALL HCOI_GC_WriteDiagn( am_I_Root, Input_Opt, .FALSE., RC )
+!    ASSERT_(RC==GC_SUCCESS)
 
     ! Pass arrays from State_Diag to MAPL Export
 !#if defined( MODEL_GEOS )
