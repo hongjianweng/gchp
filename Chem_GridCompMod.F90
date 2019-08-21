@@ -6248,17 +6248,19 @@ CONTAINS
     ! Scalars
     INTEGER                    :: STATUS
     INTEGER                    :: I, J, N, IM, JM, LM, DryID
-    LOGICAL                    :: IsNOy,  DoPM25
+    LOGICAL                    :: IsBry, IsNOy,  IsCly, IsOrgCl, DoPM25
     LOGICAL                    :: RunMe, IsPM25, IsSOA, IsNi, IsSu, IsOC, IsBC, IsDu, IsSS
     CHARACTER(LEN=ESMF_MAXSTR) :: Iam           ! Gridded component name
     CHARACTER(LEN=ESMF_MAXSTR) :: FieldName, SpcName
     REAL                       :: MW
     REAL                       :: Ra_z0, Ra_2m, Ra_10m
     REAL                       :: t_, rho_, fhs_, ustar_, dz_, z0h_
+    REAL                       :: BrCoeff, ClCoeff, OrgClCoeff
 !    REAL, ALLOCATABLE          :: Ra2m(:,:), Ra10m(:,:)
 !    REAL, ALLOCATABLE          :: Lz0(:,:),  L2m(:,:), L10m(:,:)
     REAL, POINTER              :: Ptr3D(:,:,:), PtrTmp(:,:,:), Ptr2D(:,:)
-    REAL, POINTER              :: NOy(:,:,:), Ptr2m(:,:), Ptr10m(:,:)
+    REAL, POINTER              :: Bry(:,:,:), NOy(:,:,:), Ptr2m(:,:), Ptr10m(:,:)
+    REAL, POINTER              :: Cly(:,:,:), OrgCl(:,:,:) 
     REAL, ALLOCATABLE          :: CONV(:,:), MyPM25(:,:,:)
     TYPE(Species), POINTER     :: SpcInfo
 
@@ -6294,6 +6296,7 @@ CONTAINS
     REAL, POINTER, DIMENSION(:,:,:)  :: PtrASOA1
     REAL, POINTER, DIMENSION(:,:,:)  :: PtrASOA2
     REAL, POINTER, DIMENSION(:,:,:)  :: PtrASOA3
+
 
     REAL, PARAMETER                  :: Lv = 2257000.0 !J kg-1
     REAL, PARAMETER                  :: Cv = 1004.0 !J K-1 kg-1 
@@ -6344,6 +6347,7 @@ CONTAINS
 !       Ra10m(I,J) = 0.01 * ( Ra_z0 - Ra_10m ) ! convert to s cm-1
 !    ENDDO
 !    ENDDO
+
     CALL MAPL_GetPointer( EXPORT, Ptr2d,  'DryDepRa2m', &
                           NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(Ptr2d) ) Ptr2d = State_Chm%DryDepRa2m
@@ -6361,6 +6365,12 @@ CONTAINS
     !=======================================================================
     CALL MAPL_GetPointer( EXPORT, NOy, 'NOy', NotFoundOk=.TRUE., __RC__ )
     IF ( ASSOCIATED(NOy) ) NOy = 0.0
+    CALL MAPL_GetPointer( EXPORT, Bry, 'Bry', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(Bry) ) Bry = 0.0
+    CALL MAPL_GetPointer( EXPORT, Cly, 'Cly', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(Cly) ) Cly = 0.0
+    CALL MAPL_GetPointer( EXPORT, OrgCl, 'OrganicCl', NotFoundOk=.TRUE., __RC__ )
+    IF ( ASSOCIATED(OrgCl) ) OrgCl = 0.0
 
     ! Check for PM25 diagnostics
     CALL MAPL_GetPointer( EXPORT, PtrPM25         , 'myPM25'         , &
@@ -6448,8 +6458,69 @@ CONTAINS
        ELSE
           IsNOy = .FALSE.
        ENDIF
+       IF ( IsNOy ) RunMe = .TRUE.
 
-       ! Is this a NOy species?
+       ! Is this a Bry species?
+       BrCoeff = 0.0
+       IF ( ASSOCIATED(Bry) ) THEN
+          SELECT CASE ( TRIM(SpcName) )
+             CASE ( 'Br', 'BrO', 'HOBr', 'HBr', 'BrNO2', 'BrNO3', 'BrCl', 'IBr' )
+                BrCoeff = 1.0
+                IsBry   = .TRUE.
+             CASE ( 'Br2' )
+                BrCoeff = 2.0
+                IsBry   = .TRUE.
+             CASE DEFAULT
+                IsBry = .FALSE.
+          END SELECT
+       ELSE
+          IsBry = .FALSE.
+       ENDIF
+       IF ( IsBry ) RunMe = .TRUE.
+
+       ! Is this a Cly species?
+       ClCoeff = 0.0
+       IF ( ASSOCIATED(Cly) ) THEN
+          SELECT CASE ( TRIM(SpcName) )
+             CASE ( 'Cl', 'ClO', 'OClO', 'ClOO', 'HOCl', 'HCl', 'ClNO2', 'ClNO3', 'BrCl', 'ICl' )
+                ClCoeff = 1.0
+                IsCly   = .TRUE.
+             CASE ( 'Cl2', 'Cl2O2' )
+                ClCoeff = 2.0
+                IsCly   = .TRUE.
+             CASE DEFAULT
+                IsCly = .FALSE.
+          END SELECT
+       ELSE
+          IsCly = .FALSE.
+       ENDIF
+       IF ( IsCly ) RunMe = .TRUE.
+
+       ! Is this an OrgCl species?
+       OrgClCoeff = 0.0
+       IF ( ASSOCIATED(Cly) ) THEN
+          SELECT CASE ( TRIM(SpcName) )
+             CASE ( 'H1211', 'CFC115', 'CH3Cl', 'HCFC142b', 'HCFC22', 'CH2ICl' )
+                OrgClCoeff = 1.0
+                IsOrgCl    = .TRUE.
+             CASE ( 'CFC114', 'CFC12', 'HCFC141b', 'HCFC123', 'CH2Cl2' )
+                OrgClCoeff = 2.0
+                IsOrgCl    = .TRUE.
+             CASE ( 'CFC11', 'CFC113', 'CH3CCl3', 'CHCl3' ) 
+                OrgClCoeff = 3.0
+                IsOrgCl    = .TRUE.
+             CASE ( 'CCl4' ) 
+                OrgClCoeff = 4.0
+                IsOrgCl    = .TRUE.
+             CASE DEFAULT
+                IsOrgCl = .FALSE.
+          END SELECT
+       ELSE
+          IsOrgCl = .FALSE.
+       ENDIF
+       IF ( IsOrgCl ) RunMe = .TRUE.
+
+       ! Is this a PM25 component?
        IF ( DoPM25 ) THEN
           SELECT CASE ( TRIM(SpcName) )
              CASE ( 'NH4', 'NIT' )
@@ -6486,7 +6557,7 @@ CONTAINS
                              NotFoundOk=.TRUE., __RC__ )
 
        ! Fill exports
-       IF ( ASSOCIATED(Ptr3D) .OR. IsNOy .OR. ASSOCIATED(Ptr2m) .OR. &
+       IF ( ASSOCIATED(Ptr3D)  .OR. IsNOy .OR. ASSOCIATED(Ptr2m) .OR. &
             ASSOCIATED(Ptr10m) ) RunMe = .TRUE.
        IF ( RunMe ) THEN
 
@@ -6539,6 +6610,21 @@ CONTAINS
           ! NOy concentration
           !====================================================================
           IF ( IsNOy ) NOy = NOy + PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
+
+          !====================================================================
+          ! Bry concentration
+          IF ( IsBry ) Bry = Bry + BrCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
+          !====================================================================
+
+          !====================================================================
+          ! Cly concentration
+          !====================================================================
+          IF ( IsCly ) Cly = Cly + ClCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
+
+          !====================================================================
+          ! OrgCl concentration
+          !====================================================================
+          IF ( IsOrgCl ) OrgCl = OrgCl + OrgClCoeff * PtrTmp * ( MAPL_AIRMW / MW ) / ( 1.0 - Q )
 
           !==================================================================
           ! PM2.5 diagnostics. Calculate PM25 according to 
