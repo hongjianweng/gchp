@@ -730,7 +730,7 @@ CONTAINS
           CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), &
                           iName=iName,                  &
                           KppSpcID=-1,                  &
-                          oFullName = FullName,         &
+                          oDiagName = FullName,         &
                           oFormula = Formula,           &
                           Found=Found,                  &
                           Underscores = .TRUE.,         &
@@ -808,7 +808,7 @@ CONTAINS
              ! Get long name
              iName = TRIM(SpcName)
              CALL Spc_Info ( am_I_Root = MAPL_am_I_Root(), iName=iName, &
-                             KppSpcID=-1, oFullName = FullName, &
+                             KppSpcID=-1, oDiagName = FullName, &
                              oFormula = Formula, &
                              Found=Found, Underscores = .TRUE., RC = RC )
              IF ( .NOT. FOUND ) FullName = TRIM(SpcName)
