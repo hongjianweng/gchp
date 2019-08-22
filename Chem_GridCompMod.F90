@@ -152,6 +152,16 @@ MODULE Chem_GridCompMod
   LOGICAL                          :: DoAERO
   LOGICAL                          :: DoRATS
   LOGICAL                          :: DoANOX
+
+  ! To set ozone from PCHEM 
+  LOGICAL                          :: LANAO3
+  LOGICAL                          :: LPCHEMO3
+  INTEGER                          :: ANAO3L1
+  INTEGER                          :: ANAO3L2
+  INTEGER                          :: ANAO3L3
+  INTEGER                          :: ANAO3L4
+  REAL                             :: ANAO3FR 
+  CHARACTER(LEN=ESMF_MAXSTR)       :: ANAO3FILE
 #else
   LOGICAL                          :: isProvider ! provider to AERO, RATS, ANOX?
   LOGICAL                          :: calcOzone  ! if PTR_GCCTO3 is associated
@@ -276,7 +286,11 @@ MODULE Chem_GridCompMod
 #endif
 
   ! MPI communicator
+  ! A variable like this is defined in error_mod, should use that one instead?
+  ! ckeller, 8/22/19
+#if !defined( MODEL_GEOS )
   INTEGER, SAVE     :: mpiCOMM
+#endif
 
 #if defined( MODEL_GEOS )
   ! GEOS-5 only (also in gigc_providerservices but don't use yet):
@@ -960,16 +974,15 @@ CONTAINS
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'WetLossConv_'//TRIM(AdvSpc(I)),               & 
           LONG_NAME          = TRIM(FullName)//' vertical integrated loss'//  &
-                               ' in convective updrafts',
+                               ' in convective updrafts',                     &
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
                                                                      __RC__ )
        ! 3D
        CALL MAPL_AddExportSpec(GC,                                            &
-          SHORT_NAME         = 'WetLossConv3D_'//TRIM(AdvSpc(I)),        & 
+          SHORT_NAME         = 'WetLossConv3D_'//TRIM(AdvSpc(I)),             &
           LONG_NAME          = TRIM(FullName)//' loss in convective updrafts',&
-          UNITS              = 'kg m-2 s-1',
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzVert,                             &
           VLOCATION          = MAPL_VLocationCenter,                          &
@@ -978,7 +991,7 @@ CONTAINS
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'WetLossLS_'//TRIM(AdvSpc(I)),                 & 
           LONG_NAME          = TRIM(FullName)//' vertical integrated loss'//  &
-                               ' in large scale precipitation',
+                               ' in large scale precipitation',               &
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzOnly,                             &
           VLOCATION          = MAPL_VLocationNone,                            &
@@ -989,7 +1002,7 @@ CONTAINS
           UNITS              = 'kg m-2 s-1',                                  &
           DIMS               = MAPL_DimsHorzVert,                             &
           VLOCATION          = MAPL_VLocationCenter,                          &
-
+                                                                     __RC__ )
        ! Total wet deposition flux
        CALL MAPL_AddExportSpec(GC,                                            &
           SHORT_NAME         = 'WetLossTot_'//TRIM(AdvSpc(I)),                & 
@@ -2547,7 +2560,7 @@ CONTAINS
        IF ( GCID > 0 ) THEN
           CALL Tend_CreateClass( am_I_Root, Input_Opt, State_Chm, &
                                  'CHEM',    __RC__ )
-          CALL Tend_Add        ( am_I_Root, Input_Opt, State_Chm, &
+          CALL Tend_Add        ( am_I_Root, Input_Opt, State_Chm, State_Grid, &
                                  'CHEM',    GCID,      __RC__ )
        ENDIF
     ENDIF
@@ -2557,7 +2570,7 @@ CONTAINS
        IF ( GCID > 0 ) THEN
           CALL Tend_CreateClass( am_I_Root, Input_Opt, State_Chm, &
                                  'CHEM',    __RC__ )
-          CALL Tend_Add        ( am_I_Root, Input_Opt, State_Chm, &
+          CALL Tend_Add        ( am_I_Root, Input_Opt, State_Chm, State_Grid, &
                                  'CHEM',    GCID,      __RC__ )
        ENDIF
     ENDIF
@@ -2688,23 +2701,11 @@ CONTAINS
     ENDIF
 
     ! Tropopause options 
-    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt,                    &
-                                  Label = "Cap_polar_tropopause:", &
+    CALL ESMF_ConfigGetAttribute( GeosCF, DoIt, Label = "Cap_polar_tropopause:", &
                                   Default = 1, __RC__ ) 
     Input_Opt%LCAPTROP = ( DoIt == 1 )
     IF ( am_I_Root ) THEN
        WRITE(*,*) '- Cap polar tropopause: ', Input_Opt%LCAPTROP
-    ENDIF
-
-    CALL ESMF_ConfigGetAttribute( GeosCF, OzPause, Label = "Use_ozonopause:", &
-                                  Default = -999.0, __RC__ ) 
-    Input_Opt%OZONOPAUSE = OzPause
-    IF ( am_I_Root ) THEN
-       IF ( OzPause > 0.0 ) THEN
-          WRITE(*,*) '- Use ozonopause at ', OzPause, ' ppb'
-       ELSE
-          WRITE(*,*) '- Use GEOS-5 blended tropopause'
-       ENDIF
     ENDIF
 
     ! Check for pertubation of O3 field 
@@ -3070,6 +3071,7 @@ CONTAINS
     INTEGER                      :: myPet         ! PET # we are on now
     INTEGER                      :: nPets         ! Total # of PETs
     INTEGER                      :: I, J, L       ! Loop indices
+    INTEGER                      :: IM,JM,LM      ! Grid dimensions 
     INTEGER                      :: LR, N         ! Loop indices
     INTEGER                      :: N_TRC         ! Shadow var: # of tracers
     INTEGER                      :: year          ! Current year    
@@ -3104,8 +3106,11 @@ CONTAINS
     TYPE(MAPL_MetaComp), POINTER :: STATE
 
     ! For CTM Mode
+    ! ckeller, 8/22/19: In GEOS, PLE and AIRDENS are from the IMPORT state
+#if !defined( MODEL_GEOS )
     REAL(ESMF_KIND_R8),  POINTER :: PLE(:,:,:)     => NULL() ! INTERNAL: PEDGE
     REAL,                POINTER :: AIRDENS(:,:,:) => NULL() ! INTERNAL: PEDGE
+#endif
 
     ! For aero bundle
     INTEGER                      :: nAero
@@ -3432,6 +3437,12 @@ CONTAINS
                       localpet  = myPet,    &  ! # of the PET we are on now
                       petCount  = nPets,    &  ! Total # of PETs
                       __RC__ )
+
+       ! For convenience, set grid dimension variables. These are being used in Includes_Before_Run.H
+       ! ckeller, 8/22/19
+       IM = State_Grid%NX
+       JM = State_Grid%NY
+       LM = State_Grid%NZ
 
        ! Allocate GMAO_ZTH (declared at top of module)
        IF ( .not. ALLOCATED( zenith ) ) THEN

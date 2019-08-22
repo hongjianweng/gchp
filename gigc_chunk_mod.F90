@@ -33,7 +33,6 @@ MODULE GIGC_Chunk_Mod
 ! !PRIVATE MEMBER FUNCTIONS:
 !
 #if defined( MODEL_GEOS )
-  PRIVATE :: SET_OZONOPAUSE
   PRIVATE :: StateDiag2Export ! GEOS-5 only, temporary! (ewl)
 #endif
 !
@@ -197,8 +196,8 @@ CONTAINS
 #if defined( MODEL_GEOS )
     ! ckeller, 01/16/17
     ! ewl to do: revisit if we need these here
-    Input_Opt%MAX_DIAG      = 1 
-    Input_Opt%MAX_FAM       = 250
+    !Input_Opt%MAX_DIAG      = 1 
+    !Input_Opt%MAX_FAM       = 250
     Input_Opt%LINOZ_NLAT    = 18
     Input_Opt%LINOZ_NMONTHS = 12
     Input_Opt%LINOZ_NFIELDS = 7
@@ -329,7 +328,8 @@ CONTAINS
     ! allocated accordingly when initializing State_Diag. Here, we thus 
     ! only need to initialize the tendencies, which have not been initialized
     ! yet (ckeller, 11/29/17). 
-    CALL Tend_Init ( am_I_Root, Input_Opt, State_Met, State_Chm, RC ) 
+    CALL Tend_Init ( am_I_Root, Input_Opt, State_Chm, State_Grid, &
+                     State_Met, RC ) 
     ASSERT_(RC==GC_SUCCESS)
 #endif
 
@@ -412,7 +412,7 @@ CONTAINS
 
 #if defined( MODEL_GEOS )
     USE DAO_MOD,            ONLY : GET_COSINE_SZA
-    USE DIAG_MOD,           ONLY : AD21
+    !USE DIAG_MOD,           ONLY : AD21
     USE HCOI_GC_MAIN_MOD,   ONLY : HCOI_GC_WriteDiagn
 #endif
 !
@@ -669,14 +669,6 @@ CONTAINS
                                     State_Met      = State_Met,  &
                                     RC             = RC         )
 
-#if defined( MODEL_GEOS )
-    ! Eventually set tropopause pressure according to ozone values
-    ! (use ozonopause) 
-    CALL SET_OZONOPAUSE ( am_I_Root,  Input_Opt, State_Chm, &
-                          State_Grid, State_Met, RC )
-    IF ( RC /= GC_SUCCESS ) RETURN 
-#endif
-
     ! Set dry surface pressure (PS1_DRY) from State_Met%PS1_WET
     CALL SET_DRY_SURFACE_PRESSURE( State_Grid, State_Met, 1 )
 
@@ -929,8 +921,7 @@ CONTAINS
 ! or
 !    IF ( Phase /= 2 ) THEN
 ! or
-    IF ( .NOT. Input_Opt%LCH4EMIS ) THEN
-       IF ( DoTurb .OR. DoTend ) THEN
+    IF ( .NOT. Input_Opt%LCH4EMIS .AND. ( DoTurb .OR. DoTend ) ) THEN
 #else
     IF ( Phase /= 2 .AND. Input_Opt%ITS_A_FULLCHEM_SIM  &
          .AND. IND_('CH4','A') > 0 ) THEN
@@ -996,7 +987,6 @@ CONTAINS
     ! in the Radiation Menu. This must be done before the call to any
     ! diagnostic and only on a chemistry timestep.
     ! (skim, 02/05/11)
-#if defined( MODEL_GEOS )
     ! RECOMPUTE_OD also contains a call to AEROSOL_CONC, which updates
     ! the PM25 diagnostics.
     !IF ( DoChem .AND. ND21 > 0 ) THEN
@@ -1006,21 +996,14 @@ CONTAINS
     ! Will need to come up with an alternative since all AD arrays
     ! will be removed with binary diagnostics (ewl, 12/1/18)
 ! ewl: this use of AD21 might be an issue after flexgrid
-    IF ( Input_Opt%ND21 > 0 ) THEN
-          AD21(:,:,:,:) = 0.0
-    ENDIF
-#else
+!    IF ( Input_Opt%ND21 > 0 ) THEN
+!          AD21(:,:,:,:) = 0.0
+!    ENDIF
     IF ( DoChem ) THEN
-#endif
        CALL RECOMPUTE_OD ( am_I_Root,  Input_Opt, State_Chm, State_Diag, &
                            State_Grid, State_Met, RC )
        ASSERT_(RC==GC_SUCCESS)
-#if defined( MODEL_GEOS )
-    !ENDIF
-    !ENDIF
-#else
     ENDIF
-#endif
 
     if(am_I_Root.and.NCALLS<10) write(*,*) ' --- Do diagnostics now'
     CALL MAPL_TimerOn( STATE, 'GC_DIAGN' )
@@ -1214,112 +1197,6 @@ CONTAINS
   END SUBROUTINE GIGC_Chunk_Final
 !EOC
 #if defined( MODEL_GEOS )
-!------------------------------------------------------------------------------
-!          Harvard University Atmospheric Chemistry Modeling Group            !
-!------------------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: set_ozonopause
-!
-! !DESCRIPTION: 
-!\\
-!\\
-! !INTERFACE:
-!
-  SUBROUTINE SET_OZONOPAUSE ( am_I_Root,  Input_Opt, State_Chm, &
-                              State_Grid, State_Met, RC )
-!
-! !USES:
-!
-    USE ErrCode_Mod
-    USE Input_Opt_Mod,  ONLY : OptInput
-    USE State_Chm_Mod,  ONLY : ChmState, Ind_
-    USE State_Grid_Mod, ONLY : GrdState
-    USE State_Met_Mod,  ONLY : MetState
-    USE PRESSURE_MOD,   ONLY : GET_PCENTER
-!
-! !INPUT PARAMETERS:
-!
-    LOGICAL,        INTENT(IN)    :: am_I_Root     ! Are we on the root CPU?
-    TYPE(OptInput), INTENT(IN)    :: Input_Opt     ! Input Options object
-    TYPE(GrdState), INTENT(IN)    :: State_Grid    ! Grid State object
-!
-! !INPUT/OUTPUT PARAMETERS:
-!
-    TYPE(ChmState), INTENT(INOUT) :: State_Chm     ! Chem state object
-    TYPE(MetState), INTENT(INOUT) :: State_Met     ! Meteorology State object
-!
-! !OUTPUT PARAMETERS:
-!
-    INTEGER,        INTENT(OUT)   :: RC            ! Success or failure
-!
-! !REMARKS:
-! 
-! !REVISION HISTORY: 
-!  10 Nov 2015 - C. Keller   - Initial version
-!EOP
-!------------------------------------------------------------------------------
-!BOC
-!
-! !LOCAL VARIABLES:
-!
-    INTEGER            :: I, J, L, N, IDTO3
-    LOGICAL            :: IsInStrat
-    REAL(fp)           :: O3val
-    INTEGER, PARAMETER :: NLEVEL = 3
-
-    ! Assume success
-    RC = GC_SUCCESS
-
-    ! Species index
-    IDTO3 = Ind_('O3')
-
-    ! Return here if ozonopause parameter has invalid value
-    IF ( Input_Opt%OZONOPAUSE <= 0.0_fp .OR. IDTO3 < 0 ) RETURN
-
-    ! Reset tropopause pressures
-    State_Met%TROPP(:,:) = 0.0_fp
-
-    ! ozonopause value (ppb --> v/v) 
-    O3val = Input_Opt%OZONOPAUSE * 1.0e-9_fp
-
-    ! Loop over grid boxes on this PET
-    DO J = 1, State_Grid%NY
-    DO I = 1, State_Grid%NX
-
-       IsInStrat = .FALSE.
-
-       ! Find first level where ozone concentration exceeds threshold 
-       DO L = 1, State_Grid%NZ
-          IF ( State_Chm%Species(I,J,L,IDTO3) >= O3val ) THEN
-             ! Sanity check: level above should have higher ozone and  
-             ! pressure should be above 500hPa
-             IF ( L > ( LM-NLEVEL+1 ) ) THEN
-                IsInStrat = .TRUE.
-             ELSEIF ( GET_PCENTER(I,J,L) >= 500.0_fp ) THEN
-                IsInStrat = .FALSE.
-             ELSE
-                IsInStrat = .TRUE.
-                DO N = 1, NLEVEL
-                   IF ( State_Chm%Species(I,J,L+N,IDTO3) < State_Chm%Species(I,J,L,IDTO3) ) THEN
-                      IsInStrat = .FALSE.
-                      EXIT
-                   ENDIF
-                ENDDO
-             ENDIF
-          ENDIF
-
-          ! Set TROPP to value in middle of this grid box
-          IF ( IsInStrat ) THEN
-                State_Met%TROPP(I,J) = GET_PCENTER(I,J,L) 
-             EXIT ! End L loop
-          ENDIF
-       ENDDO
-    ENDDO
-    ENDDO
-
-  END SUBROUTINE SET_OZONOPAUSE
-!EOC
 ! ewl - temporarily put this back in to move over diags as needed
 !------------------------------------------------------------------------------
 !          Harvard University Atmospheric Chemistry Modeling Group            !
@@ -1346,7 +1223,7 @@ CONTAINS
     USE State_Chm_Mod,   ONLY : ChmState, Ind_
     USE State_Diag_Mod,  ONLY : DgnState
     USE DiagList_Mod,    ONLY : DgnList 
-    USE DIAG_MOD,        ONLY : AD21
+    !USE DIAG_MOD,        ONLY : AD21
     USE DIAG_OH_MOD,     ONLY : OH_MASS, AIR_MASS 
     USE PhysConstants,   ONLY : PI_180
 !
@@ -1467,14 +1344,14 @@ CONTAINS
              CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
              IF ( ASSOCIATED(Ptr2D) ) THEN
                 Ptr2D(:,:) = SUM(State_Diag%WetLossLS(:,:,:,I),DIM=3)
-                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:)
                 Ptr2D => NULL()
              END IF
              DiagName = 'WetLossLS3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
              CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
              IF ( ASSOCIATED(Ptr3D) ) THEN
                 DO L = 1,LM
-                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossLS(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossLS(:,:,L,I) / State_Met%AREA_M2(:,:)
                 ENDDO
                 Ptr3D => NULL()
              END IF
@@ -1483,14 +1360,14 @@ CONTAINS
              CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
              IF ( ASSOCIATED(Ptr2D) ) THEN
                 Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3)
-                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:)
                 Ptr2D => NULL()
              END IF
              DiagName = 'WetLossConv3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
              CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
              IF ( ASSOCIATED(Ptr3D) ) THEN
                 DO L = 1,LM
-                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:)
                 ENDDO
                 Ptr3D => NULL()
              END IF
@@ -1500,7 +1377,7 @@ CONTAINS
              IF ( ASSOCIATED(Ptr2D) ) THEN
                 Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3) &
                            + SUM(State_Diag%WetLossLS  (:,:,:,I),DIM=3)
-                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:)
                 Ptr2D => NULL()
              END IF
              DiagName = 'WetLossTot3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
@@ -1508,7 +1385,7 @@ CONTAINS
              IF ( ASSOCIATED(Ptr3D) ) THEN
                 DO L = 1,LM
                    Ptr3D(:,:,LM-L+1) = ( State_Diag%WetLossConv(:,:,L,I) + &
-                                         State_Diag%WetLossLS  (:,:,L,I) ) / State_Met%AREA_M2(:,:,1)
+                                         State_Diag%WetLossLS  (:,:,L,I) ) / State_Met%AREA_M2(:,:)
                 ENDDO
                 Ptr3D => NULL()
              END IF
@@ -1527,14 +1404,14 @@ CONTAINS
 !             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
 !             IF ( ASSOCIATED(Ptr2D) ) THEN
 !                Ptr2D(:,:) = SUM(State_Diag%WetLossConv(:,:,:,I),DIM=3)
-!                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+!                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:)
 !                Ptr2D => NULL()
 !             END IF
 !             DiagName = 'WetLossConv3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
 !             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
 !             IF ( ASSOCIATED(Ptr3D) ) THEN
 !                DO L = 1,LM
-!                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+!                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossConv(:,:,L,I) / State_Met%AREA_M2(:,:)
 !                ENDDO
 !                Ptr3D => NULL()
 !             END IF
@@ -1553,14 +1430,14 @@ CONTAINS
 !             CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
 !             IF ( ASSOCIATED(Ptr2D) ) THEN
 !                Ptr2D(:,:) = SUM(State_Diag%WetLossLS(:,:,:,I),DIM=3)
-!                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:,1)
+!                Ptr2D(:,:) = Ptr2D(:,:) / State_Met%AREA_M2(:,:)
 !                Ptr2D => NULL()
 !             END IF
 !             DiagName = 'WetLossLS3D_'//TRIM(State_Chm%SpcData(N)%Info%Name)
 !             CALL MAPL_GetPointer( Export, Ptr3D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
 !             IF ( ASSOCIATED(Ptr3D) ) THEN
 !                DO L = 1,LM
-!                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossLS(:,:,L,I) / State_Met%AREA_M2(:,:,1)
+!                   Ptr3D(:,:,LM-L+1) = State_Diag%WetLossLS(:,:,L,I) / State_Met%AREA_M2(:,:)
 !                ENDDO
 !                Ptr3D => NULL()
 !             END IF
@@ -1686,65 +1563,65 @@ CONTAINS
        Ptr2D = State_Diag%CH4pseudoFlux
     ENDIF
 
+    ! ckeller, 8/22/2019: AOD not supported anymore
     ! AOD 
-    !IF ( ND21 > 0 .AND. Input_Opt%LCHEM .AND. IsChemTime ) THEN
-    IF ( Input_Opt%ND21 > 0 ) THEN
-       ALLOCATE( Diag2D(IM,JM) )
-       DO I = 1,14
-          SELECT CASE ( I )
-             CASE ( 1 )
-                DiagName    = 'AOD550_CLOUD'
-                Diag2D(:,:) = SUM(State_Met%OPTD,DIM=3)
-             CASE ( 2 )
-                DiagName    = 'AOD550_DUST'
-                Diag2D(:,:) = SUM(AD21(:,:,:,4),DIM=3)
-             CASE ( 3 )
-                DiagName    = 'AOD550_SULFATE'
-                Diag2D(:,:) = SUM(AD21(:,:,:,6),DIM=3)
-             CASE ( 4 )
-                DiagName    = 'AOD550_BC'
-                Diag2D(:,:) = SUM(AD21(:,:,:,9),DIM=3)
-             CASE ( 5 )
-                DiagName    = 'AOD550_OC'
-                Diag2D(:,:) = SUM(AD21(:,:,:,12),DIM=3)
-             CASE ( 6 )
-                DiagName    = 'AOD550_SALA'
-                Diag2D(:,:) = SUM(AD21(:,:,:,15),DIM=3)
-             CASE ( 7 )
-                DiagName    = 'AOD550_SALC'
-                Diag2D(:,:) = SUM(AD21(:,:,:,18),DIM=3)
-             CASE ( 8 )
-                DiagName    = 'AOD550_DST1'
-                Diag2D(:,:) = SUM(AD21(:,:,:,21),DIM=3)
-             CASE ( 9 )
-                DiagName    = 'AOD550_DST2'
-                Diag2D(:,:) = SUM(AD21(:,:,:,22),DIM=3)
-             CASE ( 10 )
-                DiagName    = 'AOD550_DST3'
-                Diag2D(:,:) = SUM(AD21(:,:,:,23),DIM=3)
-             CASE ( 11 )
-                DiagName    = 'AOD550_DST4'
-                Diag2D(:,:) = SUM(AD21(:,:,:,24),DIM=3)
-             CASE ( 12 )
-                DiagName    = 'AOD550_DST5'
-                Diag2D(:,:) = SUM(AD21(:,:,:,25),DIM=3)
-             CASE ( 13 )
-                DiagName    = 'AOD550_DST6'
-                Diag2D(:,:) = SUM(AD21(:,:,:,26),DIM=3)
-             CASE ( 14 )
-                DiagName    = 'AOD550_DST7'
-                Diag2D(:,:) = SUM(AD21(:,:,:,27),DIM=3)
-             CASE DEFAULT
-                DiagName    = 'AOD550_DUMMY'
-          END SELECT
-          CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
-          IF ( ASSOCIATED(Ptr2D) ) THEN
-             Ptr2D(:,:) = Diag2D
-             Ptr2D => NULL()
-          END IF
-       ENDDO
-       DEALLOCATE( Diag2D )
-    ENDIF
+!    IF ( Input_Opt%ND21 > 0 ) THEN
+!       ALLOCATE( Diag2D(IM,JM) )
+!       DO I = 1,14
+!          SELECT CASE ( I )
+!             CASE ( 1 )
+!                DiagName    = 'AOD550_CLOUD'
+!                Diag2D(:,:) = SUM(State_Met%OPTD,DIM=3)
+!             CASE ( 2 )
+!                DiagName    = 'AOD550_DUST'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,4),DIM=3)
+!             CASE ( 3 )
+!                DiagName    = 'AOD550_SULFATE'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,6),DIM=3)
+!             CASE ( 4 )
+!                DiagName    = 'AOD550_BC'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,9),DIM=3)
+!             CASE ( 5 )
+!                DiagName    = 'AOD550_OC'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,12),DIM=3)
+!             CASE ( 6 )
+!                DiagName    = 'AOD550_SALA'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,15),DIM=3)
+!             CASE ( 7 )
+!                DiagName    = 'AOD550_SALC'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,18),DIM=3)
+!             CASE ( 8 )
+!                DiagName    = 'AOD550_DST1'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,21),DIM=3)
+!             CASE ( 9 )
+!                DiagName    = 'AOD550_DST2'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,22),DIM=3)
+!             CASE ( 10 )
+!                DiagName    = 'AOD550_DST3'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,23),DIM=3)
+!             CASE ( 11 )
+!                DiagName    = 'AOD550_DST4'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,24),DIM=3)
+!             CASE ( 12 )
+!                DiagName    = 'AOD550_DST5'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,25),DIM=3)
+!             CASE ( 13 )
+!                DiagName    = 'AOD550_DST6'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,26),DIM=3)
+!             CASE ( 14 )
+!                DiagName    = 'AOD550_DST7'
+!                Diag2D(:,:) = SUM(AD21(:,:,:,27),DIM=3)
+!             CASE DEFAULT
+!                DiagName    = 'AOD550_DUMMY'
+!          END SELECT
+!          CALL MAPL_GetPointer( Export, Ptr2D, TRIM(DiagName), NotFoundOk=.TRUE., __RC__ )
+!          IF ( ASSOCIATED(Ptr2D) ) THEN
+!             Ptr2D(:,:) = Diag2D
+!             Ptr2D => NULL()
+!          END IF
+!       ENDDO
+!       DEALLOCATE( Diag2D )
+!    ENDIF
 
     ! Some met variables 
     DiagName = 'GCC_SUNCOS'

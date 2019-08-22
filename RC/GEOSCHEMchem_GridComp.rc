@@ -113,12 +113,6 @@ Convective_precip_correction: 1.0
 Cap_polar_tropopause: 0
 
 #
-# %%% Ozonopause value in ppb. If set to <= 0.0, the 
-# %%% GEOS-5 tropopause will be used (default) 
-#
-Use_ozonopause: -999.0
-
-#
 # %%% Prescribe stratospheric H2O
 #
 Prescribe_strat_H2O: 1

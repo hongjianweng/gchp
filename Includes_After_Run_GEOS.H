@@ -83,8 +83,8 @@
 
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'KPPHvalue' , notFoundOK=.TRUE., __RC__ ) 
   IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%KPPHvalue) ) THEN
-     Ptr3D(:,:,1:LM-LLCHEM) = 0.0
-     Ptr3D(:,:,LM:LM-LLCHEM+1:-1) = REAL(State_Chm%KPPHvalue(:,:,1:LLCHEM),KIND=ESMF_KIND_R4)
+     Ptr3D(:,:,:) = 0.0
+     Ptr3D(:,:,LM:1:-1) = REAL(State_Chm%KPPHvalue(:,:,1:LM),KIND=ESMF_KIND_R4)
   ENDIF
   Ptr3D => NULL()
 

@@ -99,7 +99,7 @@
 !  ENDDO
 
   ! Treat area as 1D
-  State_Met%AREA_M2(:,:,1) = AREA
+  !State_Met%AREA_M2(:,:) = AREA
 
   ! Surface geopotential height [m]
   State_Met%PHIS(:,:) = ZLE(:,:,LM)
@@ -143,7 +143,6 @@
         !-------------------------------------------------------------------
         ! "True" met fields (i.e. passed from GCM)
         !-------------------------------------------------------------------
-!        State_Met%AREA_M2 (I,J,L)  = AREA   (I,J   )        ! m2
         State_Met%AIRDEN  (I,J,L)  = AIRDENS(I,J,LR)        ! kg/m3
         State_Met%CLDF    (I,J,L)  = FCLD   (I,J,LR)        ! unitless
 !        State_Met%DQIDTMST(I,J,L)  = DQIDT  (I,J,LR)        ! kg/kg/s
@@ -199,11 +198,11 @@
 
         ! Air mass in grid box [kg]
         State_Met%AD      (I,J,L)  =   State_Met%AIRDEN  (I,J,L   )   &
-                                   *   State_Met%AREA_M2 (I,J,1   )   &
+                                   *   State_Met%AREA_M2 (I,J     )   &
                                    *   State_Met%BXHEIGHT(I,J,L   )
 
         ! Grid box volume [m3]
-        State_Met%AIRVOL  (I,J,L)  =   State_Met%AREA_M2 (I,J,1   )   &
+        State_Met%AIRVOL  (I,J,L)  =   State_Met%AREA_M2 (I,J     )   &
                                    *   State_Met%BXHEIGHT(I,J,L   )
 
   ENDDO
@@ -256,7 +255,7 @@
 
   CALL MAPL_GetPointer( INTSTATE, Ptr3D, 'KPPHvalue' , notFoundOK=.TRUE., __RC__ )
   IF ( ASSOCIATED(Ptr3D) .AND. ASSOCIATED(State_Chm%KPPHvalue) ) THEN
-     State_Chm%KPPHvalue(:,:,1:LLCHEM) = REAL(Ptr3D(:,:,LM:LM-LLCHEM+1:-1),KIND=ESMF_KIND_R8)
+     State_Chm%KPPHvalue(:,:,1:LM) = REAL(Ptr3D(:,:,LM:1:-1),KIND=ESMF_KIND_R8)
   ENDIF
   Ptr3D => NULL()
 
