@@ -3143,6 +3143,7 @@ CONTAINS
     ! Some checks for replay runs
     LOGICAL                      :: FIRSTREWIND
     LOGICAL                      :: AFTERREWIND
+    LOGICAL                      :: IsFirst
     INTEGER, SAVE                :: pymd = 0         ! previous date
     INTEGER, SAVE                :: phms = 0         ! previous time
     INTEGER, SAVE                :: nnRewind = 0
@@ -3779,9 +3780,10 @@ CONTAINS
 
 #if defined( MODEL_GEOS )
        ! Eventually initialize species concentrations from external field. 
-       IF ( InitFromFile .AND. ( FIRST .OR. FIRSTREWIND ) ) THEN 
-          CALL InitFromFile_( GC, Import, INTSTATE, Export, Clock, &
-                              Input_Opt,  State_Met, State_Chm, Q, __RC__ ) 
+       IF ( InitFromFile ) THEN 
+          IsFirst = ( FIRST .OR. FIRSTREWIND )
+          CALL InitFromFile_( GC, Import, INTSTATE, Export, Clock, Input_Opt, &
+                              State_Met, State_Chm, Q, PLE, GCCTROPP, IsFirst, __RC__ ) 
        ENDIF
 
        !=======================================================================
