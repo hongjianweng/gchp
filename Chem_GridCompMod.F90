@@ -5083,9 +5083,7 @@ CONTAINS
 ! 
     ! Objects
     TYPE(ESMF_Time)               :: startTime      ! ESMF start time obj
-#if !defined( MODEL_GEOS )
     TYPE(ESMF_Time)               :: stopTime       ! ESMF stop time obj
-#endif
     TYPE(ESMF_Time)               :: currTime       ! ESMF current time obj
     TYPE(ESMF_TimeInterval)       :: elapsedTime    ! ESMF elapsed time obj
     TYPE(ESMF_TimeInterval)       :: chemInterval   ! chemistry interval
@@ -5198,10 +5196,10 @@ CONTAINS
 #if defined( MODEL_GEOS )
     ! Simulation dates. Legacy stuff, not used. 
     ! Set to dummy values (ckeller, 1/18/18)
-    IF ( PRESENT( nymdB ) ) nymdB = 20130701 
-    IF ( PRESENT( nhmsB ) ) nhmsB = 000000 
-    IF ( PRESENT( nymdE ) ) nymdE = 20130701 
-    IF ( PRESENT( nhmsE ) ) nhmsE = 000000 
+!    IF ( PRESENT( nymdB ) ) nymdB = 20130701 
+!    IF ( PRESENT( nhmsB ) ) nhmsB = 000000 
+!    IF ( PRESENT( nymdE ) ) nymdE = 20130701 
+!    IF ( PRESENT( nhmsE ) ) nhmsE = 000000 
 
     !=======================================================================
     ! Does the import restart file exist?
@@ -5234,9 +5232,7 @@ CONTAINS
     ! Get the ESMF time object
     CALL ESMF_ClockGet( Clock,                    &
                         startTime    = startTime, &
-#if !defined( MODEL_GEOS )
                         stopTime     = stopTime,  &
-#endif
                         currTime     = currTime,  &
                         advanceCount = count,     &
                          __RC__ )
@@ -5249,19 +5245,6 @@ CONTAINS
     IF ( PRESENT( nymd     ) ) CALL MAPL_PackTime( nymd, yyyy, mm, dd )
     IF ( PRESENT( nhms     ) ) CALL MAPL_PackTime( nhms, h,    m,  s  )
 
-#if defined( MODEL_GEOS )
-    IF ( PRESENT( advCount ) ) advCount = count
-    IF ( PRESENT( year     ) ) year     = yyyy
-    IF ( PRESENT( month    ) ) month    = mm
-    IF ( PRESENT( day      ) ) day      = dd
-    IF ( PRESENT( dayOfYr  ) ) dayOfYr  = doy
-    IF ( PRESENT( hour     ) ) hour     = h
-    IF ( PRESENT( minute   ) ) minute   = m
-    IF ( PRESENT( second   ) ) second   = s
-    IF ( PRESENT( utc      ) ) utc      = ( DBLE( h )        ) + & 
-                                          ( DBLE( m )/60d0   ) + &
-                                          ( DBLE( s )/3600d0 )
-#else
     ! Get ending-time fields from the time object
     CALL ESMF_TimeGet( stopTime, yy=yyyy, mm=mm, dd=dd, dayOfYear=doy, &
                                  h=h,     m=m,   s=s,   __RC__ )
@@ -5319,7 +5302,6 @@ CONTAINS
     IF ( PRESENT( nhmsE    ) ) CALL MAPL_PackTime( nhmsE, h,    m,  s  )
 
     IF ( PRESENT( advCount ) ) advCount = count
-#endif
 
     ! Compute elapsed time since start of simulation
     elapsedTime = currTime - startTime
