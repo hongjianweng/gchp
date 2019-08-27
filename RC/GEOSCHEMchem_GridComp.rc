@@ -49,24 +49,7 @@ LINOZ_NFIELDS:         7
 LINOZ_NLAT            18
 LINOZ_NLEVELS:        25
 LINOZ_NMONTHS:        12
-LLSTRAT:              59
-
-#
-# %%% FAST-JX options %%%
-#
-LLFASTJX:             601 
-FJX_EXTRAL_ITERMAX:   1 
-FJX_EXTRAL_ERR:       1
-
-#
-# %%% Run phases (1 or 2. 2 recommended) %%% 
-#
-RUN_PHASES:        2
-
-#
-# %%% Stop if KPP integration fails (default: 1) %%% 
-#
-KPP_STOP_IF_FAIL:  0
+LLSTRAT:              72
 
 #
 # %%% Compute vertical updraft velocity (used for
@@ -104,13 +87,23 @@ ARCHIVED_CONV:        0
 # %%% parameter to a value between 0.0 and 1.0 are 
 # %%% untested! 
 #
-### cakelle2, 20180828: bug fix, changed from -999.0 to 1.0 
-Convective_precip_correction: 1.0
+Convective_precip_correction: 1.0 
+
+#
+# %%% Use GMI P/L for O3 (default=no)? %%% 
+#
+Use_GMI_O3_PL:        0
 
 #
 # %%% Cap polar tropopause at 200hPa (default=yes)? %%% 
 #
 Cap_polar_tropopause: 0
+
+#
+# %%% Ozonopause value in ppb. If set to <= 0.0, the 
+# %%% GEOS-5 tropopause will be used (default) 
+#
+Use_ozonopause: -999.0
 
 #
 # %%% Prescribe stratospheric H2O
@@ -122,31 +115,25 @@ Prescribe_strat_H2O: 1
 # %%% instead of internal state
 #
 INIT_SPC_FROM_FILE: 0
-INIT_SPC_FILE: /discover/nobackup/cakelle2/GEOS_CF/v11-02e/GC_v1102e/21_v11-02e_UCX_PL/GEOSChem_restart.201308010000.edit.nc
-DATA_ON_GEOS_LEVELS: 0
-ONLY_ABOVE_TROPOPAUSE: 0
-DATA_IS_IN_PPBV: 1
+###INIT_SPC_FILE: /discover/nobackup/cakelle2/GEOS_CF/v11-02e/GC_v1102e/21_v11-02e_UCX_PL/GEOSChem_restart.201308010000.edit.nc
+INIT_SPC_FILE: /discover/nobackup/cakelle2/GEOS_CF/restarts/StratosphereRestart/gcc_c48_7b.rst_3d_Nv.20190101_0100z.nc4
+DATA_ON_GEOS_LEVELS: 1
+ONLY_ABOVE_TROPOPAUSE: 1
+DATA_IS_IN_PPBV: 0
 DO_NOT_OVERWRITE_ABOVE_LEVEL: -999
 ONLY_ON_FIRST_STEP: 1
 
-USE_GMI_MESO: 0
-GMI_TEMPLATE: /discover/nobackup/cakelle2/data/GMI/gmi.clim.%spc.geos5.2x25.esmf.nc
-#
-# %%% Use GMI P/L for O3 (default=no)? %%%
-#
-Use_GMI_O3_PL:        0
-
-# Options to nudge O3 between level ANAO3L1 and ANAO3L4. If the flag Use_ANA_O3 is set to 1, GEOS-Chem ozone is nudged to 
+# Options to nudge O3 between level ANAO3L1 and ANAO3L4. If the flag Use_ANA_O3 is set to 1, GEOS-Chem ozone is nudged to
 # the analysis field taken from the file specified in ANAO3TMPL. Nudging is performed between levels ANAO3L1 and ANAO3L4
 # (level numbers go from 1 = surface to top of atmosphere).
-# As 'blending factor' it uses the value specified in ANAO3FR, with a smooth vertical transition between zero and full nudging 
-# between levels ANAO3L1 to ANAO3L2 (lower boundary), and ANAO3L3 to ANAO3L4 (upper boundary), respectively. If the flag 
-# 'Use_PCHEM_O3' is enabled, it will use the internal PCHEM O3 to do the nudging instead of the field provided in ANAO3TMPL. 
+# As 'blending factor' it uses the value specified in ANAO3FR, with a smooth vertical transition between zero and full nudging
+# between levels ANAO3L1 to ANAO3L2 (lower boundary), and ANAO3L3 to ANAO3L4 (upper boundary), respectively. If the flag
+# 'Use_PCHEM_O3' is enabled, it will use the internal PCHEM O3 to do the nudging instead of the field provided in ANAO3TMPL.
 # Use_ANA_O3 must still be enabled in this case.
 # A nuding attempt is made every three hours (0130, 0430, ...) at the beginning of phase one of GEOS-Chem. If using ANAO3TMPL,
 # it will look for variable 'O3' in that file, and the units of the field are assumed to be kg/kg (total air). This field
 # must be on native GEOS vertical levels (i.e. level 1 = top of atmosphere).
-# If no file is found for a given time step, nudging is skipped. Diagnostics 'ANA_O3_INC' outputs the ozone increments added to 
+# If no file is found for a given time step, nudging is skipped. Diagnostics 'ANA_O3_INC' outputs the ozone increments added to
 # the GEOS-Chem ozone field.
 Use_ANA_O3: 0
 ANAO3TMPL: /discover/nobackup/projects/gmao/yotc/pub/fp/das/Y%y4/M%m2/D%d2/GEOS.fp.asm.tavg3_3d_asm_Nv.%y4%m2%d2_%h2%n2.V01.nc4
@@ -156,10 +143,3 @@ ANAO3L3: 72
 ANAO3L4: 72
 ANAO3FR: 0.2
 Use_PCHEM_O3: 0
-
-# Turn off heterogenous reactions in stratosphere?
-# If true, the following heterogeneous reactions are disabled (in the stratosphere):
-# ClNO3(g) + HBr(l,s) --> BrCl + HNO3
-# BrNO3(g) + HCl(l,s) --> BrCl + HNO3
-# HOCl(g) + HBr(l,s) --> BrCl + H2O
-TurnOffHetRates: 0

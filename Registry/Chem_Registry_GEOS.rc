@@ -256,8 +256,9 @@
   NO2toNOx                        | 1              | xyz | C |    |   |   |     | NO2_to_NOx_ratio
   FJX_EXTRAL_NLEVS                | 1              | xy  |   |    |   |   |     | FAST-JX_EXTRAL_layers 
   FJX_EXTRAL_NITER                | 1              | xy  |   |    |   |   |     | FAST-JX_EXTRAL_iterations
-  GCC_SUNCOS                      | 1              | xy  |   |    |   |   |     | GEOS-Chem_cosine_of_solar_zenith_angle 
-  GCC_SZA                         | degrees        | xy  |   |    |   |   |     | GEOS-Chem_solar_zenith_angle
+  GCD_SUNCOS                      | 1              | xy  |   |    |   |   |     | GEOS-Chem_cosine_of_solar_zenith_angle 
+  GCD_SZA                         | degrees        | xy  |   |    |   |   |     | GEOS-Chem_solar_zenith_angle
+  GCD_YMIDR                       | radians        | xy  |   |    |   |   |     | GEOS-Chem_lat_midpoints
 # --------------------------------|----------------|-----|---|----|---|---|-----|---------------------------------
 </ExportSpec>
 #                               --------------
