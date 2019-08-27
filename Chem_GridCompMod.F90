@@ -3825,19 +3825,21 @@ CONTAINS
        ! Also make sure that radiation fields are available. State_Met%OPTD is
        ! a good proxy since it is composed of three imports from RADIATION.
        ! (ckeller, 11/25/2015)
+       ! GlobalSum does not seem to work properly anymore, skip this error
+       ! trap (ckeller, 8/27/2019).
        !=======================================================================
-       DFPAR_MAX = GlobalSum( GC, DataPtr2D=DFPAR, maximum=.TRUE., __RC__ )
-       IF ( DFPAR_MAX == 0.0 ) THEN
-          Input_Opt%haveImpRst = .FALSE. 
-       
-          ! Warning message
-          IF ( am_I_Root ) THEN
-             write(*,*) ' '
-             write(*,*)    &
-                   'All GEOS-Chem radiation imports are zero - skip time step'
-             write(*,*) ' '
-          ENDIF
-       ENDIF
+!       DFPAR_MAX = GlobalSum( GC, DataPtr2D=DFPAR, maximum=.TRUE., __RC__ )
+!       IF ( DFPAR_MAX == 0.0 ) THEN
+!          Input_Opt%haveImpRst = .FALSE. 
+!       
+!          ! Warning message
+!          IF ( am_I_Root ) THEN
+!             write(*,*) ' '
+!             write(*,*)    &
+!                   'All GEOS-Chem radiation imports are zero - skip time step'
+!             write(*,*) ' '
+!          ENDIF
+!       ENDIF
 
        !=======================================================================
        ! Handling of species/tracer initialization. Default practice is to take
@@ -4853,9 +4855,11 @@ CONTAINS
 
 ! ewl is this used, and correct?
     ! Print mean OH value to GEOS-Chem log-file
-    IF ( Input_Opt%ITS_A_FULLCHEM_SIM ) THEN
-       CALL Print_Mean_OH( GC, State_Grid, logLun, __RC__ )
-    ENDIF
+    ! GlobalSum used within Print_Mean_OH does not work anymore - skip mean
+    ! OH printout for now (ckeller, 8/27/2019).
+!    IF ( Input_Opt%ITS_A_FULLCHEM_SIM ) THEN
+!       CALL Print_Mean_OH( GC, State_Grid, logLun, __RC__ )
+!    ENDIF
 #endif
 
     !=======================================================================
