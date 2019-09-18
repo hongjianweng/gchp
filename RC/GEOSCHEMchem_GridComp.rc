@@ -52,6 +52,13 @@ LINOZ_NMONTHS:        12
 LLSTRAT:              72
 
 #
+# %%% FAST-JX options %%%
+#
+LLFASTJX:             601
+FJX_EXTRAL_ITERMAX:   1
+FJX_EXTRAL_ERR:       1
+
+#
 # %%% Compute vertical updraft velocity (used for
 # %%% wet scavenging) from online values. If set to
 # %%% false (default), a value of 5 m/s and 10 m/s
